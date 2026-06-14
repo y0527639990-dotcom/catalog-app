@@ -1,0 +1,58 @@
+import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/server";
+import { hashPassword, setSession } from "@/lib/auth";
+
+export async function POST(request: Request) {
+  try {
+    const { storeName, password } = await request.json();
+
+    if (!storeName?.trim() || !password?.trim()) {
+      return NextResponse.json(
+        { error: "יש למלא שם חנות וסיסמה" },
+        { status: 400 },
+      );
+    }
+
+    if (password.length < 4) {
+      return NextResponse.json(
+        { error: "הסיסמה חייבת להכיל לפחות 4 תווים" },
+        { status: 400 },
+      );
+    }
+
+    const supabase = createAdminClient();
+    const passwordHash = await hashPassword(password);
+
+    const { data, error } = await supabase
+      .from("stores")
+      .insert({
+        store_name: storeName.trim(),
+        password_hash: passwordHash,
+      })
+      .select("id, store_name")
+      .single();
+
+    if (error) {
+      if (error.code === "23505") {
+        return NextResponse.json(
+          { error: "שם החנות כבר קיים. נסה להתחבר." },
+          { status: 409 },
+        );
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    await setSession({
+      role: "store",
+      storeId: data.id,
+      storeName: data.store_name,
+    });
+
+    return NextResponse.json({ success: true, storeName: data.store_name });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "שגיאה בהרשמה" },
+      { status: 500 },
+    );
+  }
+}

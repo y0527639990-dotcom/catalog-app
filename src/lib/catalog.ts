@@ -1,0 +1,111 @@
+import { createAdminClient } from "./supabase/server";
+import { fetchRivhitItems, getSku, resolveImageUrl } from "./rivhit";
+import type { CatalogProduct, Category, ProductOverride } from "./types";
+
+export async function getCategories(): Promise<Category[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name, sort_order")
+    .order("sort_order", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function getOverridesMap(): Promise<Map<number, ProductOverride>> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from("product_overrides").select("*");
+
+  if (error) throw new Error(error.message);
+
+  const map = new Map<number, ProductOverride>();
+  for (const row of data ?? []) {
+    map.set(row.rivhit_item_id, row as ProductOverride);
+  }
+  return map;
+}
+
+export async function getCatalogProducts(): Promise<CatalogProduct[]> {
+  const [items, categories, overrides, mappingsResult] = await Promise.all([
+    fetchRivhitItems(),
+    getCategories(),
+    getOverridesMap(),
+    createAdminClient()
+      .from("product_mappings")
+      .select("rivhit_item_id, category_id, sort_order"),
+  ]);
+
+  if (mappingsResult.error) {
+    throw new Error(mappingsResult.error.message);
+  }
+
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+  const mappingByItem = new Map<
+    number,
+    { category_id: string; sort_order: number }
+  >();
+
+  for (const mapping of mappingsResult.data ?? []) {
+    mappingByItem.set(mapping.rivhit_item_id, mapping);
+  }
+
+  const products: CatalogProduct[] = [];
+
+  for (const item of items) {
+    const override = overrides.get(item.item_id);
+    if (override?.is_hidden) continue;
+
+    const mapping = mappingByItem.get(item.item_id);
+    if (!mapping) continue;
+
+    const category = categoryMap.get(mapping.category_id);
+    if (!category) continue;
+
+    const sku = getSku(item);
+    if (!sku) continue;
+
+    products.push({
+      itemId: item.item_id,
+      sku,
+      name: override?.custom_name || item.item_name,
+      price: override?.custom_price ?? item.sale_nis,
+      image:
+        override?.custom_image ||
+        resolveImageUrl(item.picture_link) ||
+        null,
+      categoryId: category.id,
+      categoryName: category.name,
+    });
+  }
+
+  products.sort((a, b) => {
+    if (a.categoryName !== b.categoryName) {
+      return a.categoryName.localeCompare(b.categoryName, "he");
+    }
+    return a.name.localeCompare(b.name, "he");
+  });
+
+  return products;
+}
+
+export function buildWhatsAppOrderUrl(
+  storeName: string,
+  items: { sku: string; quantity: number }[],
+  notes?: string,
+) {
+  const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "972555662240";
+  const lines = [
+    `הזמנה מ: ${storeName}`,
+    "─────────────────",
+    ...items.map((item) => `• מק"ט: ${item.sku} × ${item.quantity}`),
+    "─────────────────",
+  ];
+
+  if (notes?.trim()) {
+    lines.push(`הערות: ${notes.trim()}`);
+  }
+
+  const text = encodeURIComponent(lines.join("\n"));
+  return `https://wa.me/${phone}?text=${text}`;
+}

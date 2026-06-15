@@ -23,11 +23,95 @@ function buildWhatsAppUrl(
   return `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`;
 }
 
+function matchesSearch(product: CatalogProduct, term: string) {
+  const q = term.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    product.name.toLowerCase().includes(q) ||
+    product.sku.toLowerCase().includes(q)
+  );
+}
+
 interface CategoryGroup {
   id: string;
   name: string;
   products: CatalogProduct[];
   image: string | null;
+}
+
+function ProductGrid({
+  products,
+  quantities,
+  setQuantities,
+  onAddToCart,
+}: {
+  products: CatalogProduct[];
+  quantities: Record<number, number>;
+  setQuantities: React.Dispatch<
+    React.SetStateAction<Record<number, number>>
+  >;
+  onAddToCart: (product: CatalogProduct) => void;
+}) {
+  if (products.length === 0) {
+    return (
+      <p className="rounded-2xl bg-white p-6 text-center text-sm text-gray-600 shadow">
+        לא נמצאו מוצרים.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {products.map((product) => (
+        <article
+          key={product.itemId}
+          className="flex flex-col rounded-2xl bg-white p-3 shadow-sm"
+        >
+          {product.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={product.image}
+              alt={product.name}
+              className="mb-2 aspect-square w-full rounded-xl object-cover"
+            />
+          ) : (
+            <div className="mb-2 flex aspect-square w-full items-center justify-center rounded-xl bg-gray-100 text-xs text-gray-500">
+              אין תמונה
+            </div>
+          )}
+
+          <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-gray-900">
+            {product.name}
+          </h3>
+          <p className="mt-1 text-xs text-gray-500">מק&quot;ט: {product.sku}</p>
+
+          <div className="mt-auto flex items-center gap-2 pt-3">
+            <input
+              type="number"
+              min={1}
+              value={quantities[product.itemId] ?? 1}
+              onChange={(e) =>
+                setQuantities((prev) => ({
+                  ...prev,
+                  [product.itemId]: Math.max(
+                    1,
+                    Number(e.target.value) || 1,
+                  ),
+                }))
+              }
+              className="w-14 rounded-lg border border-gray-300 px-2 py-2 text-center text-sm"
+            />
+            <button
+              onClick={() => onAddToCart(product)}
+              className="flex-1 rounded-xl bg-emerald-600 py-2 text-xs font-semibold text-white"
+            >
+              הוסף
+            </button>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
 }
 
 export default function CatalogView({
@@ -41,6 +125,7 @@ export default function CatalogView({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
+  const [search, setSearch] = useState("");
   const [cart, setCart] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState("");
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -79,6 +164,17 @@ export default function CatalogView({
   }, [products]);
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
+  const isSearching = search.trim().length > 0;
+
+  const searchResults = useMemo(() => {
+    if (!isSearching) return [];
+    return products.filter((p) => matchesSearch(p, search));
+  }, [products, search, isSearching]);
+
+  const categoryProducts = useMemo(() => {
+    if (!selectedCategory) return [];
+    return selectedCategory.products.filter((p) => matchesSearch(p, search));
+  }, [selectedCategory, search]);
 
   const cartItems: CartItem[] = Object.entries(cart).map(([sku, quantity]) => ({
     sku,
@@ -123,6 +219,16 @@ export default function CatalogView({
             יציאה
           </button>
         </div>
+
+        {categories.length > 0 && (
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="חיפוש לפי שם מוצר או מק״ט..."
+            className="mt-3 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm"
+          />
+        )}
       </header>
 
       <main className="px-4 py-4">
@@ -133,10 +239,25 @@ export default function CatalogView({
               המנהל צריך להוסיף קטגוריות ולשייך מוצרים.
             </p>
           </div>
+        ) : isSearching && !selectedCategory ? (
+          <div>
+            <h2 className="mb-4 text-xl font-bold text-gray-900">
+              תוצאות חיפוש ({searchResults.length})
+            </h2>
+            <ProductGrid
+              products={searchResults}
+              quantities={quantities}
+              setQuantities={setQuantities}
+              onAddToCart={addToCart}
+            />
+          </div>
         ) : selectedCategory ? (
           <div>
             <button
-              onClick={() => setSelectedCategoryId(null)}
+              onClick={() => {
+                setSelectedCategoryId(null);
+                setSearch("");
+              }}
               className="mb-4 flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-emerald-700 shadow-sm"
             >
               ← חזרה לקטגוריות
@@ -146,58 +267,12 @@ export default function CatalogView({
               {selectedCategory.name}
             </h2>
 
-            <div className="grid grid-cols-2 gap-3">
-              {selectedCategory.products.map((product) => (
-                <article
-                  key={product.itemId}
-                  className="flex flex-col rounded-2xl bg-white p-3 shadow-sm"
-                >
-                  {product.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="mb-2 aspect-square w-full rounded-xl object-cover"
-                    />
-                  ) : (
-                    <div className="mb-2 flex aspect-square w-full items-center justify-center rounded-xl bg-gray-100 text-xs text-gray-500">
-                      אין תמונה
-                    </div>
-                  )}
-
-                  <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-semibold text-gray-900">
-                    {product.name}
-                  </h3>
-                  <p className="mt-1 text-xs text-gray-500">
-                    מק&quot;ט: {product.sku}
-                  </p>
-
-                  <div className="mt-auto flex items-center gap-2 pt-3">
-                    <input
-                      type="number"
-                      min={1}
-                      value={quantities[product.itemId] ?? 1}
-                      onChange={(e) =>
-                        setQuantities((prev) => ({
-                          ...prev,
-                          [product.itemId]: Math.max(
-                            1,
-                            Number(e.target.value) || 1,
-                          ),
-                        }))
-                      }
-                      className="w-14 rounded-lg border border-gray-300 px-2 py-2 text-center text-sm"
-                    />
-                    <button
-                      onClick={() => addToCart(product)}
-                      className="flex-1 rounded-xl bg-emerald-600 py-2 text-xs font-semibold text-white"
-                    >
-                      הוסף
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+            <ProductGrid
+              products={categoryProducts}
+              quantities={quantities}
+              setQuantities={setQuantities}
+              onAddToCart={addToCart}
+            />
           </div>
         ) : (
           <div>

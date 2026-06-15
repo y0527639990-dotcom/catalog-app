@@ -71,3 +71,29 @@ export async function DELETE(request: Request) {
 
   return NextResponse.json({ success: true });
 }
+
+export async function PATCH(request: Request) {
+  const session = await requireAdminSession();
+  if (!session) {
+    return NextResponse.json({ error: "לא מורשה" }, { status: 401 });
+  }
+
+  const { id, name } = await request.json();
+  if (!id || !name?.trim()) {
+    return NextResponse.json({ error: "חסר מזהה או שם" }, { status: 400 });
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("categories")
+    .update({ name: name.trim() })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ category: data });
+}

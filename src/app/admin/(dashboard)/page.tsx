@@ -105,6 +105,31 @@ export default function AdminCatalogPage() {
     }
   }
 
+  async function renameCategory(id: string, name: string) {
+    setError("");
+    const response = await fetch("/api/admin/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, name: name.trim() }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "שגיאה בעדכון שם");
+      return;
+    }
+
+    setCategories((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, name: data.category.name } : c)),
+    );
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.categoryId === id ? { ...p, categoryName: data.category.name } : p,
+      ),
+    );
+    setMessage(`שם הקטגוריה עודכן ל: "${data.category.name}"`);
+  }
+
   async function saveCategory(itemId: number, categoryId: string) {
     setSavingIds((prev) => new Set(prev).add(itemId));
     setError("");
@@ -216,20 +241,12 @@ export default function AdminCatalogPage() {
         {categories.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {categories.map((category) => (
-              <span
+              <CategoryChip
                 key={category.id}
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-800"
-              >
-                {category.name}
-                <button
-                  type="button"
-                  onClick={() => deleteCategory(category.id, category.name)}
-                  className="text-red-600"
-                  aria-label={`מחק ${category.name}`}
-                >
-                  ×
-                </button>
-              </span>
+                category={category}
+                onRename={renameCategory}
+                onDelete={deleteCategory}
+              />
             ))}
           </div>
         )}
@@ -358,6 +375,80 @@ export default function AdminCatalogPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function CategoryChip({
+  category,
+  onRename,
+  onDelete,
+}: {
+  category: Category;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string, name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(category.name);
+
+  useEffect(() => {
+    setName(category.name);
+  }, [category.name]);
+
+  if (editing) {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-3 py-1 text-sm">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-28 rounded border border-gray-300 px-2 py-1 text-sm"
+          autoFocus
+        />
+        <button
+          type="button"
+          onClick={() => {
+            if (name.trim()) {
+              onRename(category.id, name);
+              setEditing(false);
+            }
+          }}
+          className="font-semibold text-emerald-700"
+        >
+          שמור
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setName(category.name);
+            setEditing(false);
+          }}
+          className="text-gray-500"
+        >
+          ביטול
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+      {category.name}
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="text-emerald-700 underline"
+        aria-label={`ערוך ${category.name}`}
+      >
+        ערוך
+      </button>
+      <button
+        type="button"
+        onClick={() => onDelete(category.id, category.name)}
+        className="text-red-600"
+        aria-label={`מחק ${category.name}`}
+      >
+        ×
+      </button>
+    </span>
   );
 }
 

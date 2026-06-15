@@ -47,6 +47,15 @@ interface CategoryGroup {
   image: string | null;
 }
 
+function formatPrice(price: number) {
+  if (!price || price <= 0) return null;
+  return new Intl.NumberFormat("he-IL", {
+    style: "currency",
+    currency: "ILS",
+    maximumFractionDigits: 2,
+  }).format(price);
+}
+
 function QuantityStepper({
   value,
   onChange,
@@ -59,18 +68,26 @@ function QuantityStepper({
       <button
         type="button"
         onClick={() => onChange(Math.max(1, value - 1))}
-        className="px-3 py-2 text-lg font-bold text-gray-700"
+        className="px-2 py-2 text-lg font-bold text-gray-700"
         aria-label="הפחת כמות"
       >
         −
       </button>
-      <span className="min-w-[2rem] text-center text-sm font-semibold">
-        {value}
-      </span>
+      <input
+        type="number"
+        min={1}
+        inputMode="numeric"
+        value={value}
+        onChange={(e) =>
+          onChange(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
+        }
+        className="w-10 border-0 bg-transparent py-2 text-center text-sm font-semibold outline-none"
+        aria-label="כמות"
+      />
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="px-3 py-2 text-lg font-bold text-gray-700"
+        className="px-2 py-2 text-lg font-bold text-gray-700"
         aria-label="הוסף כמות"
       >
         +
@@ -86,6 +103,7 @@ function ProductGrid({
   setQuantities,
   onAddToCart,
   onImageClick,
+  showPrices,
 }: {
   products: CatalogProduct[];
   cart: Record<string, number>;
@@ -95,6 +113,7 @@ function ProductGrid({
   >;
   onAddToCart: (product: CatalogProduct) => void;
   onImageClick: (src: string, alt: string) => void;
+  showPrices: boolean;
 }) {
   if (products.length === 0) {
     return (
@@ -140,6 +159,11 @@ function ProductGrid({
               {product.name}
             </h3>
             <p className="mt-1 text-xs text-gray-500">מק&quot;ט: {product.sku}</p>
+            {showPrices && formatPrice(product.price) && (
+              <p className="mt-1 text-sm font-bold text-emerald-800">
+                {formatPrice(product.price)}
+              </p>
+            )}
             {inCart && (
               <p className="mt-1 text-xs font-medium text-emerald-800">
                 בעגלה: {cart[product.sku]}
@@ -177,6 +201,7 @@ export default function CatalogView({
   storeName: string;
   initialProducts: CatalogProduct[];
 }) {
+  const SHOW_PRICES_KEY = "catalog_show_prices";
   const [products] = useState(initialProducts);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
@@ -189,6 +214,24 @@ export default function CatalogView({
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(
     null,
   );
+  const [showPrices, setShowPrices] = useState(true);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SHOW_PRICES_KEY);
+      if (saved !== null) setShowPrices(saved === "true");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  function toggleShowPrices() {
+    setShowPrices((prev) => {
+      const next = !prev;
+      localStorage.setItem(SHOW_PRICES_KEY, String(next));
+      return next;
+    });
+  }
 
   useEffect(() => {
     const defaults: Record<number, number> = {};
@@ -336,7 +379,7 @@ export default function CatalogView({
         </div>
 
         {categories.length > 0 && (
-          <div className="px-4 pb-3">
+          <div className="space-y-2 px-4 pb-3">
             <input
               type="search"
               value={search}
@@ -344,6 +387,15 @@ export default function CatalogView({
               placeholder="חיפוש לפי שם או מק״ט..."
               className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm"
             />
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={showPrices}
+                onChange={toggleShowPrices}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              הצג מחירים (מחיר מכירה מ-Rivhit)
+            </label>
           </div>
         )}
       </header>
@@ -361,6 +413,7 @@ export default function CatalogView({
             setQuantities={setQuantities}
             onAddToCart={addToCart}
             onImageClick={(src, alt) => setLightbox({ src, alt })}
+            showPrices={showPrices}
           />
         ) : onCategoryPage ? (
           <ProductGrid
@@ -370,6 +423,7 @@ export default function CatalogView({
             setQuantities={setQuantities}
             onAddToCart={addToCart}
             onImageClick={(src, alt) => setLightbox({ src, alt })}
+            showPrices={showPrices}
           />
         ) : (
           <div className="grid grid-cols-2 gap-3">

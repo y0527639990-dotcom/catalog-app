@@ -133,7 +133,7 @@ export default function CustomerLinkCard() {
             </div>
           )}
 
-          {data.localLink && (
+          {data.localLink && !data.isDeployed && (
             <LinkRow
               label={
                 data.publicLink

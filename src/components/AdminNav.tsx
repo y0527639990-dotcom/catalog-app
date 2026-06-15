@@ -47,7 +47,9 @@ export default function AdminNav() {
         </button>
       </div>
       <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3">
-        {links.map((link) => (
+        {links
+          .filter((link) => link.href !== "/admin/stores" || isSuperAdmin)
+          .map((link) => (
           <Link
             key={link.href}
             href={link.href}

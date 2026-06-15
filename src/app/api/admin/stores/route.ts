@@ -2,14 +2,13 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   hashPassword,
-  requireAdminSession,
   requireSuperAdminSession,
 } from "@/lib/auth";
 
 export async function GET() {
-  const session = await requireAdminSession();
+  const session = await requireSuperAdminSession();
   if (!session) {
-    return NextResponse.json({ error: "לא מורשה" }, { status: 401 });
+    return NextResponse.json({ error: "לא מורשה" }, { status: 403 });
   }
 
   const supabase = createAdminClient();

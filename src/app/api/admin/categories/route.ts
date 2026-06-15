@@ -78,12 +78,55 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "לא מורשה" }, { status: 401 });
   }
 
-  const { id, name } = await request.json();
-  if (!id || !name?.trim()) {
-    return NextResponse.json({ error: "חסר מזהה או שם" }, { status: 400 });
+  const body = await request.json();
+  const { id, name, move } = body;
+
+  if (!id) {
+    return NextResponse.json({ error: "חסר מזהה" }, { status: 400 });
   }
 
   const supabase = createAdminClient();
+
+  if (move === "up" || move === "down") {
+    const { data: categories, error: listError } = await supabase
+      .from("categories")
+      .select("id, sort_order")
+      .order("sort_order", { ascending: true });
+
+    if (listError) {
+      return NextResponse.json({ error: listError.message }, { status: 500 });
+    }
+
+    const index = (categories ?? []).findIndex((c) => c.id === id);
+    if (index === -1) {
+      return NextResponse.json({ error: "קטגוריה לא נמצאה" }, { status: 404 });
+    }
+
+    const swapIndex = move === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= (categories?.length ?? 0)) {
+      return NextResponse.json({ success: true });
+    }
+
+    const current = categories![index];
+    const neighbor = categories![swapIndex];
+
+    await supabase
+      .from("categories")
+      .update({ sort_order: neighbor.sort_order })
+      .eq("id", current.id);
+
+    await supabase
+      .from("categories")
+      .update({ sort_order: current.sort_order })
+      .eq("id", neighbor.id);
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (!name?.trim()) {
+    return NextResponse.json({ error: "חסר שם" }, { status: 400 });
+  }
+
   const { data, error } = await supabase
     .from("categories")
     .update({ name: name.trim() })

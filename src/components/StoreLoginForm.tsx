@@ -1,15 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
+const STORAGE_KEY = "catalog_store_login";
 
 export default function StoreLoginForm() {
   const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [storeName, setStoreName] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as {
+          storeName?: string;
+          username?: string;
+        };
+        if (parsed.storeName) setStoreName(parsed.storeName);
+        if (parsed.username) setUsername(parsed.username);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -25,7 +44,7 @@ export default function StoreLoginForm() {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeName, password }),
+        body: JSON.stringify({ storeName, username, password }),
       });
 
       const data = await response.json();
@@ -33,6 +52,14 @@ export default function StoreLoginForm() {
         setError(data.error || "שגיאה");
         return;
       }
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          storeName: storeName.trim(),
+          username: username.trim(),
+        }),
+      );
 
       router.push("/catalog");
       router.refresh();
@@ -50,8 +77,8 @@ export default function StoreLoginForm() {
       </h1>
       <p className="mb-6 text-center text-sm text-gray-600">
         {mode === "login"
-          ? "הזן את שם החנות והסיסמה שלך"
-          : "פעם ראשונה? צור שם חנות וסיסמה"}
+          ? "הזן שם חנות, שם משתמש וסיסמה"
+          : "פעם ראשונה? צור חשבון חדש"}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,7 +89,19 @@ export default function StoreLoginForm() {
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base"
-            placeholder="למשל: חנות השכונה"
+            placeholder="למשל: מינימרק השכונה"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">שם משתמש</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base"
+            placeholder="למשל: דוד"
             required
           />
         </div>
@@ -94,13 +133,17 @@ export default function StoreLoginForm() {
         </button>
       </form>
 
+      <p className="mt-4 text-center text-xs text-gray-500">
+        המכשיר יזכור את שם החנות והמשתמש לכניסה הבאה
+      </p>
+
       <button
         type="button"
         onClick={() => {
           setMode(mode === "login" ? "register" : "login");
           setError("");
         }}
-        className="mt-4 w-full text-sm text-emerald-700 underline"
+        className="mt-2 w-full text-sm text-emerald-700 underline"
       >
         {mode === "login"
           ? "פעם ראשונה? לחץ כאן להרשמה"

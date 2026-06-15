@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 interface Category {
   id: string;
   name: string;
+  sort_order: number;
 }
 
 interface AdminProduct {
@@ -130,6 +131,24 @@ export default function AdminCatalogPage() {
     setMessage(`שם הקטגוריה עודכן ל: "${data.category.name}"`);
   }
 
+  async function moveCategory(id: string, direction: "up" | "down") {
+    setError("");
+    const response = await fetch("/api/admin/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, move: direction }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      setError(data.error || "שגיאה בסידור");
+      return;
+    }
+
+    await loadCategories();
+    setMessage("סדר הקטגוריות עודכן");
+  }
+
   async function saveCategory(itemId: number, categoryId: string) {
     setSavingIds((prev) => new Set(prev).add(itemId));
     setError("");
@@ -239,13 +258,20 @@ export default function AdminCatalogPage() {
         </form>
 
         {categories.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {categories.map((category) => (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm text-gray-600">
+              סדר הקטגוריות (כפי שיופיע ללקוח) — השתמש בחיצים:
+            </p>
+            {categories.map((category, index) => (
               <CategoryChip
                 key={category.id}
                 category={category}
+                isFirst={index === 0}
+                isLast={index === categories.length - 1}
                 onRename={renameCategory}
                 onDelete={deleteCategory}
+                onMoveUp={() => moveCategory(category.id, "up")}
+                onMoveDown={() => moveCategory(category.id, "down")}
               />
             ))}
           </div>
@@ -380,12 +406,20 @@ export default function AdminCatalogPage() {
 
 function CategoryChip({
   category,
+  isFirst,
+  isLast,
   onRename,
   onDelete,
+  onMoveUp,
+  onMoveDown,
 }: {
   category: Category;
+  isFirst: boolean;
+  isLast: boolean;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string, name: string) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.name);
@@ -430,24 +464,44 @@ function CategoryChip({
   }
 
   return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-      {category.name}
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        className="text-emerald-700 underline"
-        aria-label={`ערוך ${category.name}`}
-      >
-        ערוך
-      </button>
-      <button
-        type="button"
-        onClick={() => onDelete(category.id, category.name)}
-        className="text-red-600"
-        aria-label={`מחק ${category.name}`}
-      >
-        ×
-      </button>
+    <span className="flex w-full items-center justify-between gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+      <span className="font-medium">{category.name}</span>
+      <span className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isFirst}
+          onClick={onMoveUp}
+          className="rounded border border-emerald-200 px-2 py-1 disabled:opacity-30"
+          aria-label="הזז למעלה"
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          disabled={isLast}
+          onClick={onMoveDown}
+          className="rounded border border-emerald-200 px-2 py-1 disabled:opacity-30"
+          aria-label="הזז למטה"
+        >
+          ↓
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="text-emerald-700 underline"
+          aria-label={`ערוך ${category.name}`}
+        >
+          ערוך
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(category.id, category.name)}
+          className="text-red-600"
+          aria-label={`מחק ${category.name}`}
+        >
+          ×
+        </button>
+      </span>
     </span>
   );
 }

@@ -6,9 +6,11 @@ create extension if not exists "pgcrypto";
 -- חנויות (לקוחות)
 create table if not exists stores (
   id uuid primary key default gen_random_uuid(),
-  store_name text not null unique,
+  store_name text not null,
+  username text not null default 'ראשי',
   password_hash text not null,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (store_name, username)
 );
 
 -- קטגוריות

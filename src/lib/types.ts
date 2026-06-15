@@ -31,11 +31,13 @@ export interface CatalogProduct {
   image: string | null;
   categoryId: string;
   categoryName: string;
+  categorySortOrder: number;
 }
 
 export interface Store {
   id: string;
   store_name: string;
+  username: string;
   created_at: string;
 }
 
@@ -48,4 +50,5 @@ export interface SessionData {
   role: "store" | "admin";
   storeId?: string;
   storeName?: string;
+  username?: string;
 }

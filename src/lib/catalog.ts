@@ -2,6 +2,13 @@ import { createAdminClient } from "./supabase/server";
 import { fetchRivhitItems, getSku, resolveImageUrl } from "./rivhit";
 import type { CatalogProduct, Category, ProductOverride } from "./types";
 
+function compareSku(a: string, b: string) {
+  const numA = Number.parseInt(a, 10);
+  const numB = Number.parseInt(b, 10);
+  if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numA - numB;
+  return a.localeCompare(b, "he", { numeric: true });
+}
+
 export async function getCategories(): Promise<Category[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
@@ -76,14 +83,15 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
         null,
       categoryId: category.id,
       categoryName: category.name,
+      categorySortOrder: category.sort_order,
     });
   }
 
   products.sort((a, b) => {
-    if (a.categoryName !== b.categoryName) {
-      return a.categoryName.localeCompare(b.categoryName, "he");
+    if (a.categorySortOrder !== b.categorySortOrder) {
+      return a.categorySortOrder - b.categorySortOrder;
     }
-    return a.name.localeCompare(b.name, "he");
+    return compareSku(a.sku, b.sku);
   });
 
   return products;

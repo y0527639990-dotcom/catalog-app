@@ -547,10 +547,10 @@ export default function CatalogView({
           onClick={() => setCartOpen(false)}
         >
           <div
-            className="max-h-[70vh] w-full overflow-y-auto rounded-t-2xl bg-white p-4"
+            className="flex max-h-[70vh] w-full flex-col rounded-t-2xl bg-white"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 p-4">
               <h2 className="text-lg font-bold">עגלת קניות ({cartCount})</h2>
               <button
                 type="button"
@@ -565,7 +565,7 @@ export default function CatalogView({
               <p className="py-8 text-center text-gray-500">העגלה ריקה</p>
             ) : (
               <>
-                <ul className="space-y-4">
+                <ul className="flex-1 space-y-4 overflow-y-auto p-4">
                   {cartItems.map((item) => {
                     const product = skuToProduct.get(item.sku);
                     const lineTotal =
@@ -631,11 +631,13 @@ export default function CatalogView({
                 </ul>
 
                 {cartTotal > 0 && (
-                  <div className="mt-4 flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3">
-                    <span className="font-bold text-gray-900">סה״כ לתשלום</span>
-                    <span className="text-lg font-bold text-emerald-800">
-                      {formatPrice(cartTotal)}
-                    </span>
+                  <div className="shrink-0 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+                    <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3">
+                      <span className="font-bold text-gray-900">סה״כ לתשלום</span>
+                      <span className="text-lg font-bold text-emerald-800">
+                        {formatPrice(cartTotal)}
+                      </span>
+                    </div>
                   </div>
                 )}
               </>

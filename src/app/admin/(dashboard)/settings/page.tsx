@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AnnouncementManager from "@/components/AnnouncementManager";
 
 export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -39,7 +40,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg rounded-2xl bg-white p-6 shadow-sm">
+    <div className="space-y-6">
+      <AnnouncementManager />
+
+      <div className="mx-auto max-w-lg rounded-2xl bg-white p-6 shadow-sm">
       <h2 className="text-xl font-bold">שינוי סיסמת מנהל</h2>
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div>
@@ -82,6 +86,7 @@ export default function SettingsPage() {
           {loading ? "שומר..." : "עדכן סיסמה"}
         </button>
       </form>
+    </div>
     </div>
   );
 }

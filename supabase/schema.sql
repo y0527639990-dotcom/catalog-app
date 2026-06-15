@@ -52,6 +52,18 @@ insert into admin_settings (id, password_hash)
 values (1, '$2b$10$NO9qZF.cQ4WzJ39FLBzFpujzzPOy9K6JCV.yHF8Ieq3KxtFghjsFe')
 on conflict (id) do nothing;
 
+-- מודעה ללקוחות (פופאפ)
+create table if not exists announcements (
+  id int primary key default 1 check (id = 1),
+  message text not null default '',
+  is_active boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+
+insert into announcements (id, message, is_active)
+values (1, '', false)
+on conflict (id) do nothing;
+
 -- אינדקסים
 create index if not exists idx_product_mappings_category on product_mappings(category_id);
 create index if not exists idx_product_mappings_item on product_mappings(rivhit_item_id);

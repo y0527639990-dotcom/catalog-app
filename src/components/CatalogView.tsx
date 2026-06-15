@@ -349,6 +349,26 @@ export default function CatalogView({
     }
   }
 
+  function updateCartQuantity(sku: string, quantity: number) {
+    if (quantity <= 0) {
+      removeFromCart(sku);
+      return;
+    }
+    setCart((prev) => ({ ...prev, [sku]: quantity }));
+    const product = products.find((p) => p.sku === sku);
+    if (product) {
+      setQuantities((prev) => ({ ...prev, [product.itemId]: quantity }));
+    }
+  }
+
+  const cartTotal = useMemo(() => {
+    return cartItems.reduce((sum, item) => {
+      const product = skuToProduct.get(item.sku);
+      if (!product?.price || product.price <= 0) return sum;
+      return sum + product.price * item.quantity;
+    }, 0);
+  }, [cartItems, skuToProduct]);
+
   function goToCategories() {
     setSelectedCategoryId(null);
     setSearch("");
@@ -544,45 +564,81 @@ export default function CatalogView({
             {cartItems.length === 0 ? (
               <p className="py-8 text-center text-gray-500">העגלה ריקה</p>
             ) : (
-              <ul className="space-y-3">
-                {cartItems.map((item) => {
-                  const product = skuToProduct.get(item.sku);
-                  return (
-                    <li
-                      key={item.sku}
-                      className="flex items-center gap-3 border-b border-gray-100 pb-3"
-                    >
-                      {product?.image ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="h-16 w-16 shrink-0 rounded-xl object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-xs text-gray-500">
-                          אין תמונה
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1 text-sm">
-                        <p className="font-medium leading-snug">
-                          {product?.name ?? item.sku}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          מק&quot;ט: {item.sku} × {item.quantity}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFromCart(item.sku)}
-                        className="shrink-0 text-sm text-red-600"
+              <>
+                <ul className="space-y-4">
+                  {cartItems.map((item) => {
+                    const product = skuToProduct.get(item.sku);
+                    const lineTotal =
+                      product?.price && product.price > 0
+                        ? product.price * item.quantity
+                        : null;
+
+                    return (
+                      <li
+                        key={item.sku}
+                        className="border-b border-gray-100 pb-4"
                       >
-                        הסר
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                        <div className="flex items-start gap-3">
+                          {product?.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-xs text-gray-500">
+                              אין תמונה
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium leading-snug">
+                              {product?.name ?? item.sku}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500">
+                              מק&quot;ט: {item.sku}
+                            </p>
+                            {(showPrices || lineTotal !== null) &&
+                              lineTotal !== null && (
+                              <p className="mt-1 text-sm font-semibold text-emerald-700">
+                                {formatPrice(lineTotal)}
+                                {item.quantity > 1 && product?.price
+                                  ? ` (${formatPrice(product.price)} × ${item.quantity})`
+                                  : null}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <QuantityStepper
+                            value={item.quantity}
+                            onChange={(qty) =>
+                              updateCartQuantity(item.sku, qty)
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(item.sku)}
+                            className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600"
+                          >
+                            הסר לגמרי
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {cartTotal > 0 && (
+                  <div className="mt-4 flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3">
+                    <span className="font-bold text-gray-900">סה״כ לתשלום</span>
+                    <span className="text-lg font-bold text-emerald-800">
+                      {formatPrice(cartTotal)}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

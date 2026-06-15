@@ -59,6 +59,13 @@ export default function StoreLoginForm() {
         }),
       );
 
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key?.startsWith("announcement_dismissed_")) {
+          sessionStorage.removeItem(key);
+        }
+      }
+
       window.location.href = "/catalog";
     } catch {
       setError("שגיאת רשת. נסה שוב.");

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import CatalogView from "@/components/CatalogView";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 import type { CatalogProduct } from "@/lib/types";
 
 export default function CatalogLoader({ storeName }: { storeName: string }) {
@@ -62,6 +63,7 @@ export default function CatalogLoader({ storeName }: { storeName: string }) {
 
   return (
     <>
+      <AnnouncementPopup />
       {error && (
         <div className="bg-red-50 px-4 py-3 text-center text-sm text-red-700">
           {error}

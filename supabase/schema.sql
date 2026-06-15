@@ -86,6 +86,17 @@ create table if not exists agent_accounts (
   created_at timestamptz not null default now()
 );
 
+-- מנהל ראשי (שליטה מלאה על לקוחות)
+create table if not exists super_admin_settings (
+  id int primary key default 1 check (id = 1),
+  password_hash text not null,
+  updated_at timestamptz not null default now()
+);
+
+insert into super_admin_settings (id, password_hash)
+values (1, '$2b$10$24Ks4/brmWsSvUulFXxJ5eiM0wcbXwYytWAJv/G8.1R8WiYFTpwO.')
+on conflict (id) do nothing;
+
 -- אינדקסים
 create index if not exists idx_product_mappings_category on product_mappings(category_id);
 create index if not exists idx_product_mappings_item on product_mappings(rivhit_item_id);

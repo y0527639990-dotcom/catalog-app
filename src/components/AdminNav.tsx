@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const links = [
   { href: "/admin", label: "קטלוג" },
@@ -12,10 +13,18 @@ const links = [
 export default function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/admin/me")
+      .then((r) => r.json())
+      .then((d) => setIsSuperAdmin(d.isSuperAdmin === true))
+      .catch(() => {});
+  }, []);
 
   async function logout() {
     await fetch("/api/auth/admin/logout", { method: "POST" });
-    router.push("/admin/login");
+    router.push(isSuperAdmin ? "/super-admin/login" : "/admin/login");
     router.refresh();
   }
 
@@ -23,7 +32,9 @@ export default function AdminNav() {
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
         <div>
-          <p className="text-xs text-gray-500">לוח מנהל</p>
+          <p className="text-xs text-gray-500">
+            {isSuperAdmin ? "מנהל ראשי" : "לוח מנהל"}
+          </p>
           <h1 className="text-xl font-bold text-emerald-800">
             קטלוג כוונת הלב
           </h1>

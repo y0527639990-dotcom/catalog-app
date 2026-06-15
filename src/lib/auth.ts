@@ -75,7 +75,18 @@ export async function requireStoreSession() {
 
 export async function requireAdminSession() {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (
+    !session ||
+    (session.role !== "admin" && session.role !== "super_admin")
+  ) {
+    return null;
+  }
+  return session;
+}
+
+export async function requireSuperAdminSession() {
+  const session = await getSession();
+  if (!session || session.role !== "super_admin") {
     return null;
   }
   return session;

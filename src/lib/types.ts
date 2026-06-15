@@ -78,7 +78,7 @@ export interface AgentAccount {
 }
 
 export interface SessionData {
-  role: "store" | "admin" | "agent" | "agent_manager";
+  role: "store" | "admin" | "super_admin" | "agent" | "agent_manager";
   storeId?: string;
   storeName?: string;
   username?: string;

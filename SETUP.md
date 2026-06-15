@@ -41,3 +41,31 @@ npm run dev
 
 ההזמנה נשלחת ל: 0555662240
 בפורמט: מק"ט + כמות בלבד
+
+## שלב 5: פרסום לאינטרנט (Vercel) — קישור ללקוחות
+
+**חשוב:** כתובת כמו `kavanat-catalog.vercel.app` לא קיימת עד שמפרסמים. אם מקבלים `404 DEPLOYMENT_NOT_FOUND` — האפליקציה עדיין לא פורסמה.
+
+### צעדים (פעם אחת)
+
+1. היכנס ל-https://vercel.com והתחבר (עם GitHub)
+2. לחץ **Add New → Project**
+3. בחר את הריפו **catalog-app** → **Import**
+4. לפני Deploy — לחץ **Environment Variables** והוסף:
+
+| שם | ערך |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | מ-Supabase → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | מ-Supabase (Publishable key) |
+| `SUPABASE_SERVICE_ROLE_KEY` | מ-Supabase (Secret key) |
+| `RIVHIT_API_TOKEN` | הטוקן מ-Rivhit |
+| `RIVHIT_API_URL` | `https://api.rivhit.co.il/online/RivhitOnlineAPI.svc` |
+| `NEXT_PUBLIC_APP_NAME` | `קטלוג כוונת הלב` |
+| `NEXT_PUBLIC_WHATSAPP_NUMBER` | `972555662240` |
+| `SESSION_SECRET` | מחרוזת אקראית ארוכה (למשל 32 תווים) |
+
+5. לחץ **Deploy** — המתן 2–3 דקות
+6. Vercel ייתן כתובת אמיתית, למשל: `https://catalog-app-xxxxx.vercel.app`
+7. שלח ללקוחות: `https://catalog-app-xxxxx.vercel.app/login`
+
+> אפשר לשנות שם ב-Settings → Domains, רק אם השם פנוי ב-Vercel.

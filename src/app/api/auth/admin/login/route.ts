@@ -18,7 +18,13 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !data) {
-      return NextResponse.json({ error: "הגדרות מנהל לא נמצאו" }, { status: 500 });
+      const detail = error?.message ?? "no row";
+      return NextResponse.json(
+        {
+          error: `הגדרות מנהל לא נמצאו (${detail}). בדוק: /api/health/db`,
+        },
+        { status: 500 },
+      );
     }
 
     const valid = await verifyPassword(password, data.password_hash);

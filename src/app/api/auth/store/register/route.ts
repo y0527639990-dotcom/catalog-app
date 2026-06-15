@@ -50,9 +50,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, storeName: data.store_name });
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "שגיאה בהרשמה" },
-      { status: 500 },
-    );
+    const message = error instanceof Error ? error.message : "שגיאה בהרשמה";
+    const friendly =
+      message.includes("fetch failed") || message.includes("Missing Supabase")
+        ? "בעיית חיבור למסד הנתונים. בדוק הגדרות Supabase ב-Vercel."
+        : message;
+
+    return NextResponse.json({ error: friendly }, { status: 500 });
   }
 }

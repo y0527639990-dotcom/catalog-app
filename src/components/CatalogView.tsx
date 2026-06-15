@@ -63,6 +63,22 @@ function QuantityStepper({
   value: number;
   onChange: (value: number) => void;
 }) {
+  const [draft, setDraft] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) {
+      setDraft(String(value));
+    }
+  }, [value, focused]);
+
+  function commitDraft() {
+    const parsed = Number.parseInt(draft, 10);
+    const next = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+    onChange(next);
+    setDraft(String(next));
+  }
+
   return (
     <div className="flex items-center rounded-lg border border-gray-300 bg-white">
       <button
@@ -74,15 +90,29 @@ function QuantityStepper({
         −
       </button>
       <input
-        type="number"
-        min={1}
+        type="text"
         inputMode="numeric"
-        value={value}
-        onChange={(e) =>
-          onChange(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
-        }
-        className="w-10 border-0 bg-transparent py-2 text-center text-sm font-semibold outline-none"
-        aria-label="כמות"
+        pattern="[0-9]*"
+        value={focused ? draft : String(value)}
+        onFocus={(e) => {
+          setFocused(true);
+          setDraft(String(value));
+          requestAnimationFrame(() => e.target.select());
+        }}
+        onBlur={() => {
+          setFocused(false);
+          commitDraft();
+        }}
+        onChange={(e) => {
+          setDraft(e.target.value.replace(/\D/g, ""));
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.currentTarget.blur();
+          }
+        }}
+        className="w-14 border-0 bg-emerald-50 py-2 text-center text-base font-bold text-gray-900 outline-none ring-emerald-400 focus:bg-emerald-100 focus:ring-2"
+        aria-label="כמות — הקלד מספר"
       />
       <button
         type="button"

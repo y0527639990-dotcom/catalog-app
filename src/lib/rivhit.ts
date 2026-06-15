@@ -4,6 +4,9 @@ const RIVHIT_BASE =
   process.env.RIVHIT_API_URL ??
   "https://api.rivhit.co.il/online/RivhitOnlineAPI.svc";
 
+const RIVHIT_CACHE_TTL_MS = 5 * 60 * 1000;
+let rivhitItemsCache: { items: RivhitItem[]; fetchedAt: number } | null = null;
+
 interface RivhitResponse<T> {
   error_code: number;
   client_message: string;
@@ -44,9 +47,17 @@ async function rivhitRequest<T>(
 }
 
 export async function fetchRivhitItems(): Promise<RivhitItem[]> {
-  const data = await rivhitRequest<{ item_list: RivhitItem[] }>("Item.List", {});
+  if (
+    rivhitItemsCache &&
+    Date.now() - rivhitItemsCache.fetchedAt < RIVHIT_CACHE_TTL_MS
+  ) {
+    return rivhitItemsCache.items;
+  }
 
-  return data.item_list ?? [];
+  const data = await rivhitRequest<{ item_list: RivhitItem[] }>("Item.List", {});
+  const items = data.item_list ?? [];
+  rivhitItemsCache = { items, fetchedAt: Date.now() };
+  return items;
 }
 
 export function resolveImageUrl(pictureLink: string | null): string | null {

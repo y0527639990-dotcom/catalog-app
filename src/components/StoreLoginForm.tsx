@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 const STORAGE_KEY = "catalog_store_login";
 
 export default function StoreLoginForm() {
-  const router = useRouter();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [storeName, setStoreName] = useState("");
   const [username, setUsername] = useState("");
@@ -61,8 +59,7 @@ export default function StoreLoginForm() {
         }),
       );
 
-      router.push("/catalog");
-      router.refresh();
+      window.location.href = "/catalog";
     } catch {
       setError("שגיאת רשת. נסה שוב.");
     } finally {
@@ -141,7 +138,7 @@ export default function StoreLoginForm() {
           disabled={loading}
           className="w-full rounded-xl bg-emerald-600 py-3 text-base font-semibold text-white disabled:opacity-60"
         >
-          {loading ? "ממתין..." : isLogin ? "התחבר" : "הירשם"}
+          {loading ? "נכנס..." : isLogin ? "התחבר" : "הירשם"}
         </button>
       </form>
 

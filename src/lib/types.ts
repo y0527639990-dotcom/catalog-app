@@ -46,9 +46,43 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface RivhitCustomer {
+  customer_id: number;
+  last_name: string;
+  first_name: string;
+  street: string;
+  city: string;
+  zipcode: string;
+  phone: string;
+  email: string;
+  id_number: number;
+  vat_number: number;
+  customer_type: number;
+  agent_id: number;
+}
+
+export interface RivhitDocumentType {
+  document_type: number;
+  document_name: string;
+  document_english_name: string;
+  is_invoice_receipt: boolean;
+}
+
+export interface AgentAccount {
+  id: string;
+  username: string;
+  rivhit_agent_id: number;
+  rivhit_agent_name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface SessionData {
-  role: "store" | "admin";
+  role: "store" | "admin" | "agent" | "agent_manager";
   storeId?: string;
   storeName?: string;
   username?: string;
+  agentAccountId?: string;
+  rivhitAgentId?: number;
+  rivhitAgentName?: string;
 }

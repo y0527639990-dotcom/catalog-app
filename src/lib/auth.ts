@@ -80,3 +80,24 @@ export async function requireAdminSession() {
   }
   return session;
 }
+
+export async function requireAgentSession() {
+  const session = await getSession();
+  if (
+    !session ||
+    session.role !== "agent" ||
+    !session.agentAccountId ||
+    !session.rivhitAgentId
+  ) {
+    return null;
+  }
+  return session;
+}
+
+export async function requireAgentManagerSession() {
+  const session = await getSession();
+  if (!session || session.role !== "agent_manager") {
+    return null;
+  }
+  return session;
+}

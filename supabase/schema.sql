@@ -65,6 +65,27 @@ insert into announcements (id, message, is_active)
 values (1, '', false)
 on conflict (id) do nothing;
 
+-- ממשק סוכנים
+create table if not exists agent_manager_settings (
+  id int primary key default 1 check (id = 1),
+  password_hash text not null,
+  updated_at timestamptz not null default now()
+);
+
+insert into agent_manager_settings (id, password_hash)
+values (1, '$2b$10$XUPePkwv3EkgSPD7/GRPpeqJSKi04la/ZLQO5He10Rwh/Rfw8PbtW')
+on conflict (id) do nothing;
+
+create table if not exists agent_accounts (
+  id uuid primary key default gen_random_uuid(),
+  username text not null unique,
+  password_hash text not null,
+  rivhit_agent_id int not null,
+  rivhit_agent_name text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
 -- אינדקסים
 create index if not exists idx_product_mappings_category on product_mappings(category_id);
 create index if not exists idx_product_mappings_item on product_mappings(rivhit_item_id);

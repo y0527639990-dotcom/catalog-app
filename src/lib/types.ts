@@ -48,13 +48,13 @@ export interface CartItem {
 
 export interface RivhitCustomer {
   customer_id: number;
-  last_name: string;
-  first_name: string;
-  street: string;
-  city: string;
-  zipcode: string;
-  phone: string;
-  email: string;
+  last_name: string | null;
+  first_name: string | null;
+  street: string | null;
+  city: string | null;
+  zipcode: string | null;
+  phone: string | null;
+  email: string | null;
   id_number: number;
   vat_number: number;
   customer_type: number;

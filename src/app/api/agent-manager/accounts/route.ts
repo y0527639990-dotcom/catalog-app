@@ -29,7 +29,10 @@ export async function GET() {
       accounts: accounts ?? [],
       rivhitAgents: rivhitAgents.map((a) => ({
         id: a.customer_id,
-        name: a.last_name.trim() || a.first_name.trim() || `#${a.customer_id}`,
+        name:
+          (a.last_name ?? "").trim() ||
+          (a.first_name ?? "").trim() ||
+          `#${a.customer_id}`,
       })),
     });
   } catch (error) {
@@ -69,7 +72,9 @@ export async function POST(request: Request) {
     }
 
     const agentName =
-      agent.last_name.trim() || agent.first_name.trim() || `#${agent.customer_id}`;
+      (agent.last_name ?? "").trim() ||
+      (agent.first_name ?? "").trim() ||
+      `#${agent.customer_id}`;
 
     const supabase = createAdminClient();
     const { data, error } = await supabase

@@ -130,12 +130,20 @@ export default function AgentOrderView({
     const q = customerSearch.trim().toLowerCase();
     if (!q) return customers.slice(0, 30);
     return customers
-      .filter(
-        (c) =>
-          c.label.toLowerCase().includes(q) ||
-          c.phone.includes(q) ||
-          c.city.toLowerCase().includes(q),
-      )
+      .filter((c) => {
+        const label = (c.label ?? "").toLowerCase();
+        const phone = c.phone ?? "";
+        const city = (c.city ?? "").toLowerCase();
+        const store = (c.storeName ?? "").toLowerCase();
+        const manager = (c.managerName ?? "").toLowerCase();
+        return (
+          label.includes(q) ||
+          phone.includes(q) ||
+          city.includes(q) ||
+          store.includes(q) ||
+          manager.includes(q)
+        );
+      })
       .slice(0, 30);
   }, [customers, customerSearch]);
 

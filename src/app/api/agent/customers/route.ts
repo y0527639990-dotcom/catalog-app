@@ -7,14 +7,35 @@ import {
 } from "@/lib/rivhit-documents";
 
 function customerLabel(c: {
-  last_name: string;
-  first_name: string;
+  last_name: string | null;
+  first_name: string | null;
   customer_id: number;
 }) {
-  const store = c.last_name.trim();
-  const manager = c.first_name.trim();
+  const store = (c.last_name ?? "").trim();
+  const manager = (c.first_name ?? "").trim();
   if (store && manager) return `${store} (${manager})`;
   return store || manager || `#${c.customer_id}`;
+}
+
+function mapCustomer(c: {
+  customer_id: number;
+  last_name: string | null;
+  first_name: string | null;
+  phone: string | null;
+  city: string | null;
+  email: string | null;
+  agent_id: number;
+}) {
+  return {
+    id: c.customer_id,
+    storeName: c.last_name ?? "",
+    managerName: c.first_name ?? "",
+    label: customerLabel(c),
+    phone: c.phone ?? "",
+    city: c.city ?? "",
+    email: c.email ?? "",
+    agentId: c.agent_id ?? 0,
+  };
 }
 
 export async function GET() {
@@ -26,16 +47,7 @@ export async function GET() {
   try {
     const customers = await fetchRivhitCustomers(1);
     return NextResponse.json({
-      customers: customers.map((c) => ({
-        id: c.customer_id,
-        storeName: c.last_name,
-        managerName: c.first_name,
-        label: customerLabel(c),
-        phone: c.phone,
-        city: c.city,
-        email: c.email,
-        agentId: c.agent_id,
-      })),
+      customers: customers.map(mapCustomer),
     });
   } catch (error) {
     return NextResponse.json(

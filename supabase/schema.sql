@@ -56,6 +56,7 @@ on conflict (id) do nothing;
 create table if not exists announcements (
   id int primary key default 1 check (id = 1),
   message text not null default '',
+  image_url text,
   is_active boolean not null default false,
   updated_at timestamptz not null default now()
 );

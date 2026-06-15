@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 export default function AnnouncementPopup() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [dismissKey, setDismissKey] = useState("");
 
   useEffect(() => {
@@ -17,7 +18,8 @@ export default function AnnouncementPopup() {
         const key = `announcement_dismissed_${data.updatedAt}`;
         if (sessionStorage.getItem(key)) return;
 
-        setMessage(data.message);
+        setMessage(data.message ?? "");
+        setImageUrl(data.imageUrl ?? "");
         setDismissKey(key);
         setOpen(true);
       } catch {
@@ -40,7 +42,7 @@ export default function AnnouncementPopup() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div
-        className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+        className="relative max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="announcement-title"
@@ -48,7 +50,7 @@ export default function AnnouncementPopup() {
         <button
           type="button"
           onClick={dismiss}
-          className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-600"
+          className="absolute left-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-lg text-gray-600"
           aria-label="סגור"
         >
           ×
@@ -60,9 +62,22 @@ export default function AnnouncementPopup() {
         >
           הודעה מהחנות
         </h2>
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
-          {message}
-        </p>
+
+        {imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imageUrl}
+            alt="מודעה"
+            className="mb-3 w-full rounded-xl object-contain"
+          />
+        )}
+
+        {message.trim() && (
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
+            {message}
+          </p>
+        )}
+
         <button
           type="button"
           onClick={dismiss}

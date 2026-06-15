@@ -11,21 +11,25 @@ export async function GET() {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("announcements")
-    .select("message, is_active, updated_at")
+    .select("message, image_url, is_active, updated_at")
     .eq("id", 1)
     .maybeSingle();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ active: false });
   }
 
-  if (!data || !data.is_active || !data.message.trim()) {
+  const hasContent =
+    Boolean(data?.message?.trim()) || Boolean(data?.image_url?.trim());
+
+  if (!data || !data.is_active || !hasContent) {
     return NextResponse.json({ active: false });
   }
 
   return NextResponse.json({
     active: true,
-    message: data.message,
+    message: data.message ?? "",
+    imageUrl: data.image_url ?? "",
     updatedAt: data.updated_at,
   });
 }

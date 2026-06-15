@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function AnnouncementManager() {
   const [message, setMessage] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [isActive, setIsActive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasContent = message.trim().length > 0 || imageUrl.length > 0;
 
   useEffect(() => {
     async function load() {
@@ -20,6 +25,7 @@ export default function AnnouncementManager() {
           return;
         }
         setMessage(data.message ?? "");
+        setImageUrl(data.imageUrl ?? "");
         setIsActive(data.isActive ?? false);
       } catch {
         setError("שגיאת רשת");
@@ -31,6 +37,38 @@ export default function AnnouncementManager() {
     load();
   }, []);
 
+  async function handleImageUpload(file: File) {
+    setFeedback("");
+    setError("");
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/admin/announcement/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "שגיאה בהעלאת התמונה");
+        return;
+      }
+
+      setImageUrl(data.imageUrl);
+      setFeedback("התמונה הועלתה — לחץ «הפעל מודעה» לשמירה");
+    } catch {
+      setError("שגיאת רשת בהעלאה");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
   async function save(active: boolean) {
     setFeedback("");
     setError("");
@@ -40,7 +78,7 @@ export default function AnnouncementManager() {
       const response = await fetch("/api/admin/announcement", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message, isActive: active }),
+        body: JSON.stringify({ message, imageUrl, isActive: active }),
       });
       const data = await response.json();
 
@@ -50,6 +88,7 @@ export default function AnnouncementManager() {
       }
 
       setMessage(data.message);
+      setImageUrl(data.imageUrl ?? "");
       setIsActive(data.isActive);
       setFeedback(
         data.isActive
@@ -75,8 +114,7 @@ export default function AnnouncementManager() {
     <div className="mx-auto max-w-lg rounded-2xl bg-white p-6 shadow-sm">
       <h2 className="text-xl font-bold">מודעה ללקוחות</h2>
       <p className="mt-1 text-sm text-gray-600">
-        צור מודעה (למשל מבצע) — תופיע כפופאפ ללקוחות בכניסה לקטלוג. ניתן לסגור
-        עם X.
+        צור מודעה (טקסט ו/או תמונה) — תופיע כפופאפ ללקוחות בכניסה לקטלוג.
       </p>
 
       <div className="mt-6 space-y-4">
@@ -89,6 +127,48 @@ export default function AnnouncementManager() {
             placeholder="לדוגמה: מבצע השבוע! 10% הנחה על כל המוצרים עד יום חמישי"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm"
           />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">
+            תמונה (אופציונלי)
+          </label>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            disabled={uploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleImageUpload(file);
+            }}
+            className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            JPG, PNG, WEBP או GIF — עד 5MB
+          </p>
+
+          {uploading && (
+            <p className="mt-2 text-sm text-emerald-700">מעלה תמונה...</p>
+          )}
+
+          {imageUrl && (
+            <div className="mt-3 space-y-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt="תצוגה מקדימה"
+                className="max-h-48 w-full rounded-xl object-contain"
+              />
+              <button
+                type="button"
+                onClick={() => setImageUrl("")}
+                className="text-sm text-red-600"
+              >
+                הסר תמונה
+              </button>
+            </div>
+          )}
         </div>
 
         {isActive && (
@@ -111,7 +191,7 @@ export default function AnnouncementManager() {
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            disabled={saving || !message.trim()}
+            disabled={saving || uploading || !hasContent}
             onClick={() => save(true)}
             className="flex-1 rounded-xl bg-emerald-700 py-3 text-sm font-semibold text-white disabled:opacity-60"
           >

@@ -316,9 +316,9 @@ export default function CatalogView({
     return selectedCategory.products.filter((p) => matchesSearch(p, search));
   }, [selectedCategory, search]);
 
-  const skuToName = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const p of products) map.set(p.sku, p.name);
+  const skuToProduct = useMemo(() => {
+    const map = new Map<string, CatalogProduct>();
+    for (const p of products) map.set(p.sku, p);
     return map;
   }, [products]);
 
@@ -333,9 +333,8 @@ export default function CatalogView({
     const qty = quantities[product.itemId] || 1;
     setCart((prev) => ({
       ...prev,
-      [product.sku]: (prev[product.sku] ?? 0) + qty,
+      [product.sku]: qty,
     }));
-    setQuantities((prev) => ({ ...prev, [product.itemId]: 1 }));
   }
 
   function removeFromCart(sku: string) {
@@ -344,6 +343,10 @@ export default function CatalogView({
       delete next[sku];
       return next;
     });
+    const product = products.find((p) => p.sku === sku);
+    if (product) {
+      setQuantities((prev) => ({ ...prev, [product.itemId]: 1 }));
+    }
   }
 
   function goToCategories() {
@@ -542,28 +545,43 @@ export default function CatalogView({
               <p className="py-8 text-center text-gray-500">העגלה ריקה</p>
             ) : (
               <ul className="space-y-3">
-                {cartItems.map((item) => (
-                  <li
-                    key={item.sku}
-                    className="flex items-start justify-between gap-2 border-b border-gray-100 pb-3 text-sm"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {skuToName.get(item.sku) ?? item.sku}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        מק&quot;ט: {item.sku} × {item.quantity}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFromCart(item.sku)}
-                      className="shrink-0 text-red-600"
+                {cartItems.map((item) => {
+                  const product = skuToProduct.get(item.sku);
+                  return (
+                    <li
+                      key={item.sku}
+                      className="flex items-center gap-3 border-b border-gray-100 pb-3"
                     >
-                      הסר
-                    </button>
-                  </li>
-                ))}
+                      {product?.image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-xs text-gray-500">
+                          אין תמונה
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1 text-sm">
+                        <p className="font-medium leading-snug">
+                          {product?.name ?? item.sku}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          מק&quot;ט: {item.sku} × {item.quantity}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(item.sku)}
+                        className="shrink-0 text-sm text-red-600"
+                      >
+                        הסר
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

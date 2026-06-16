@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AgentAccount } from "@/lib/types";
+import PasswordField from "@/components/PasswordField";
 
 interface RivhitAgentOption {
   id: number;
@@ -117,10 +118,9 @@ export default function AgentManagerPage() {
           </div>
           <div>
             <label className="mb-1 block text-sm">סיסמה</label>
-            <input
-              type="password"
+            <PasswordField
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm"
             />
           </div>

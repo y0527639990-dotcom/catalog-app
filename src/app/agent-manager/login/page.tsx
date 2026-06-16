@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import PasswordField from "@/components/PasswordField";
 
 export default function AgentManagerLoginPage() {
   const router = useRouter();
@@ -47,10 +48,9 @@ export default function AgentManagerLoginPage() {
           ניהול חשבונות סוכנים
         </p>
         <label className="mb-1 block text-sm font-medium">סיסמה</label>
-        <input
-          type="password"
+        <PasswordField
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
           className="mb-4 w-full rounded-xl border border-gray-300 px-4 py-3"
           required
         />

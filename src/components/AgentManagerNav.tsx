@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
-const links = [{ href: "/agent-manager", label: "חשבונות סוכנים" }];
+const links = [
+  { href: "/agent-manager", label: "חשבונות סוכנים" },
+  { href: "/agent-manager/settings", label: "הגדרות" },
+];
 
 export default function AgentManagerNav() {
   const pathname = usePathname();

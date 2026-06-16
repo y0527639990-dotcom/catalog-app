@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { hashPassword, setSession, verifyPassword } from "@/lib/auth";
+import { insertStore, updateLastLoginChannel } from "@/lib/store-channels";
+import type { WhatsAppChannel } from "@/lib/types";
 
 export async function POST(request: Request) {
   try {
@@ -24,6 +26,7 @@ export async function POST(request: Request) {
     const trimmedStore = storeName.trim();
     const trimmedUser = username.trim();
     const trimmedPassword = password.trim();
+    const channelValue: WhatsAppChannel = channel === "b" ? "b" : "default";
 
     const { data: existing, error: lookupError } = await supabase
       .from("stores")
@@ -36,21 +39,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: lookupError.message }, { status: 500 });
     }
 
-    const channelValue = channel === "b" ? "b" : "default";
     let store = existing;
 
     if (!store) {
-      const { data: created, error: createError } = await supabase
-        .from("stores")
-        .insert({
+      const { data: created, error: createError } = await insertStore(
+        supabase,
+        {
           store_name: trimmedStore,
           username: trimmedUser,
           password_hash: await hashPassword(trimmedPassword),
-          signup_channel: channelValue,
-          last_login_channel: channelValue,
-        })
-        .select("id, store_name, username, password_hash")
-        .single();
+        },
+        channelValue,
+      );
 
       if (createError) {
         if (createError.code === "23505") {
@@ -69,14 +69,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "סיסמה שגויה" }, { status: 401 });
       }
 
-      const { error: channelError } = await supabase
-        .from("stores")
-        .update({ last_login_channel: channelValue })
-        .eq("id", store.id);
-
-      if (channelError) {
-        return NextResponse.json({ error: channelError.message }, { status: 500 });
-      }
+      await updateLastLoginChannel(supabase, store.id, channelValue);
     }
 
     await setSession({

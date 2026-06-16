@@ -4,6 +4,7 @@ import {
   hashPassword,
   requireSuperAdminSession,
 } from "@/lib/auth";
+import { listStores } from "@/lib/store-channels";
 
 export async function GET() {
   const session = await requireSuperAdminSession();
@@ -12,10 +13,7 @@ export async function GET() {
   }
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("stores")
-    .select("id, store_name, username, created_at, signup_channel, last_login_channel")
-    .order("created_at", { ascending: false });
+  const { data, error } = await listStores(supabase);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "catalog_store_login";
 
 export default function StoreLoginForm() {
-  const [mode, setMode] = useState<"login" | "register">("login");
   const [storeName, setStoreName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -33,13 +32,8 @@ export default function StoreLoginForm() {
     setError("");
     setLoading(true);
 
-    const endpoint =
-      mode === "login"
-        ? "/api/auth/store/login"
-        : "/api/auth/store/register";
-
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/auth/store/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ storeName, username, password }),
@@ -74,24 +68,18 @@ export default function StoreLoginForm() {
     }
   }
 
-  const isLogin = mode === "login";
-
   return (
     <div className="mx-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
       <h1 className="mb-2 text-center text-2xl font-bold text-emerald-800">
-        {isLogin ? "כניסת לקוח" : "הרשמת חנות חדשה"}
+        כניסה לקטלוג
       </h1>
       <p className="mb-6 text-center text-sm text-gray-600">
-        {isLogin
-          ? "הזן שם חנות, שם משתמש וסיסמה"
-          : "פעם ראשונה? צור חשבון חדש"}
+        פעם ראשונה? הזינו פרטים ובחרו סיסמה — ונכנסים ישר.
+        <br />
+        חוזרים? אותם פרטים + הסיסמה שבחרתם.
       </p>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4"
-        autoComplete={isLogin ? "on" : "off"}
-      >
+      <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
         <div>
           <label className="mb-1 block text-sm font-medium">שם החנות</label>
           <input
@@ -99,7 +87,7 @@ export default function StoreLoginForm() {
             name="store-name"
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
-            autoComplete={isLogin ? "organization" : "off"}
+            autoComplete="organization"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base"
             placeholder="למשל: מינימרק השכונה"
             required
@@ -127,9 +115,9 @@ export default function StoreLoginForm() {
             name="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete={isLogin ? "current-password" : "off"}
+            autoComplete="current-password"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base"
-            placeholder="בחר סיסמה"
+            placeholder="סיסמה לבחירתכם"
             required
           />
         </div>
@@ -145,28 +133,13 @@ export default function StoreLoginForm() {
           disabled={loading}
           className="w-full rounded-xl bg-emerald-600 py-3 text-base font-semibold text-white disabled:opacity-60"
         >
-          {loading ? "נכנס..." : isLogin ? "התחבר" : "הירשם"}
+          {loading ? "נכנס..." : "כניסה"}
         </button>
       </form>
 
       <p className="mt-4 text-center text-xs text-gray-500">
-        המכשיר יזכור שם חנות ומשתמש. אם הדפדפן מציע &quot;שנה סיסמה&quot; —
-        אפשר להתעלם.
+        המכשיר יזכור שם חנות ומשתמש לפעם הבאה.
       </p>
-
-      <button
-        type="button"
-        onClick={() => {
-          setMode(isLogin ? "register" : "login");
-          setPassword("");
-          setError("");
-        }}
-        className="mt-2 w-full text-sm text-emerald-700 underline"
-      >
-        {isLogin
-          ? "פעם ראשונה? לחץ כאן להרשמה"
-          : "כבר רשום? לחץ כאן להתחברות"}
-      </button>
     </div>
   );
 }

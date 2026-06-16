@@ -13,13 +13,16 @@ export async function GET() {
   }
 
   const supabase = createAdminClient();
-  const { data, error } = await listStores(supabase);
+  const result = await listStores(supabase);
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (result.error) {
+    return NextResponse.json({ error: result.error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ stores: data ?? [] });
+  return NextResponse.json({
+    stores: result.data ?? [],
+    trackingEnabled: result.trackingEnabled,
+  });
 }
 
 export async function PATCH(request: Request) {

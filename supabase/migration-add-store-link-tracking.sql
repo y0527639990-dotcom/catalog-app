@@ -1,5 +1,5 @@
 -- הרץ ב-Supabase SQL Editor (העתק הכל → Run)
--- מעקב: מאיזה קישור כל חנות נכנסה (קישור 1 / קישור 2)
+-- מעקב: מאיזה קישור כל חנות נכנסה
 
 create table if not exists store_link_tracking (
   store_id uuid primary key references stores(id) on delete cascade,
@@ -16,3 +16,6 @@ from stores
 on conflict (store_id) do nothing;
 
 notify pgrst, 'reload schema';
+
+-- אחרי ההרצה: לקוחות שכבר נכנסו דרך קישור 2 צריכים להתחבר שוב
+-- (יציאה → /b/login) כדי שהתיוג יתעדכן ל"קישור 2".

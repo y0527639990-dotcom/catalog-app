@@ -4,7 +4,7 @@ import { hashPassword, setSession, verifyPassword } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
-    const { storeName, username, password } = await request.json();
+    const { storeName, username, password, channel } = await request.json();
 
     if (!storeName?.trim() || !username?.trim() || !password?.trim()) {
       return NextResponse.json(
@@ -72,6 +72,7 @@ export async function POST(request: Request) {
       storeId: store.id,
       storeName: store.store_name,
       username: store.username,
+      whatsappChannel: channel === "b" ? "b" : "default",
     });
 
     return NextResponse.json({

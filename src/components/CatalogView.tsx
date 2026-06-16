@@ -2,25 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CartItem, CatalogProduct } from "@/lib/types";
+import { buildWhatsAppOrderUrl } from "@/lib/whatsapp";
 
 function buildWhatsAppUrl(
+  phone: string,
   storeName: string,
   items: CartItem[],
   notes: string,
 ) {
-  const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "972555662240";
-  const lines = [
-    `הזמנה מ: ${storeName}`,
-    "─────────────────",
-    ...items.map((item) => `• מק"ט: ${item.sku} × ${item.quantity}`),
-    "─────────────────",
-  ];
-
-  if (notes.trim()) {
-    lines.push(`הערות: ${notes.trim()}`);
-  }
-
-  return `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`;
+  return buildWhatsAppOrderUrl(phone, storeName, items, notes);
 }
 
 function compareSku(a: string, b: string) {
@@ -227,9 +217,11 @@ function ProductGrid({
 export default function CatalogView({
   storeName,
   initialProducts,
+  whatsappNumber,
 }: {
   storeName: string;
   initialProducts: CatalogProduct[];
+  whatsappNumber: string;
 }) {
   const SHOW_PRICES_KEY = "catalog_show_prices";
   const [products] = useState(initialProducts);
@@ -521,7 +513,7 @@ export default function CatalogView({
           <a
             href={
               cartItems.length > 0
-                ? buildWhatsAppUrl(storeName, cartItems, notes)
+                ? buildWhatsAppUrl(whatsappNumber, storeName, cartItems, notes)
                 : undefined
             }
             onClick={(e) => {

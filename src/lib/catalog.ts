@@ -1,6 +1,7 @@
 import { createAdminClient } from "./supabase/server";
 import { fetchRivhitItems, getSku, resolveImageUrl } from "./rivhit";
-import type { CatalogProduct, Category, ProductOverride } from "./types";
+import type { CatalogProduct, Category, ProductOverride, WhatsAppChannel } from "./types";
+import { buildWhatsAppOrderUrl as buildWaUrl, getWhatsAppNumber } from "./whatsapp";
 
 function compareSku(a: string, b: string) {
   const numA = Number.parseInt(a, 10);
@@ -101,19 +102,7 @@ export function buildWhatsAppOrderUrl(
   storeName: string,
   items: { sku: string; quantity: number }[],
   notes?: string,
+  channel?: WhatsAppChannel | null,
 ) {
-  const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "972555662240";
-  const lines = [
-    `הזמנה מ: ${storeName}`,
-    "─────────────────",
-    ...items.map((item) => `• מק"ט: ${item.sku} × ${item.quantity}`),
-    "─────────────────",
-  ];
-
-  if (notes?.trim()) {
-    lines.push(`הערות: ${notes.trim()}`);
-  }
-
-  const text = encodeURIComponent(lines.join("\n"));
-  return `https://wa.me/${phone}?text=${text}`;
+  return buildWaUrl(getWhatsAppNumber(channel), storeName, items, notes);
 }

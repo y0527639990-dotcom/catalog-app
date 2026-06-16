@@ -82,7 +82,10 @@ export interface SessionData {
   storeId?: string;
   storeName?: string;
   username?: string;
+  whatsappChannel?: WhatsAppChannel;
   agentAccountId?: string;
   rivhitAgentId?: number;
   rivhitAgentName?: string;
 }
+
+export type WhatsAppChannel = "default" | "b";

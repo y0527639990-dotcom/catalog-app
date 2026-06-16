@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import CatalogView from "@/components/CatalogView";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
-import type { CatalogProduct } from "@/lib/types";
+import type { CatalogProduct, WhatsAppChannel } from "@/lib/types";
+import { getWhatsAppNumber } from "@/lib/whatsapp";
 
 export default function CatalogLoader({ storeName }: { storeName: string }) {
   const [products, setProducts] = useState<CatalogProduct[] | null>(null);
+  const [whatsappChannel, setWhatsappChannel] =
+    useState<WhatsAppChannel>("default");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -25,6 +28,7 @@ export default function CatalogLoader({ storeName }: { storeName: string }) {
         }
 
         setProducts(data.products ?? []);
+        setWhatsappChannel(data.whatsappChannel === "b" ? "b" : "default");
       } catch {
         if (!cancelled) {
           setError("שגיאת רשת");
@@ -69,7 +73,11 @@ export default function CatalogLoader({ storeName }: { storeName: string }) {
           {error}
         </div>
       )}
-      <CatalogView storeName={storeName} initialProducts={products} />
+      <CatalogView
+        storeName={storeName}
+        initialProducts={products}
+        whatsappNumber={getWhatsAppNumber(whatsappChannel)}
+      />
     </>
   );
 }

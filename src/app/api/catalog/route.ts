@@ -12,6 +12,7 @@ export async function GET() {
     const products = await getCatalogProducts();
     return NextResponse.json({
       storeName: session.storeName,
+      whatsappChannel: session.whatsappChannel ?? "default",
       products,
     });
   } catch (error) {

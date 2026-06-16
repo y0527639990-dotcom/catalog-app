@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 interface CustomerLinkData {
   publicLink: string | null;
+  publicLinkB: string | null;
   localLink: string | null;
   isDeployed: boolean;
 }
@@ -119,7 +120,7 @@ export default function CustomerLinkCard() {
             <LinkRow
               label="קישור לאינטרנט (לשליחה ללקוחות)"
               url={data.publicLink}
-              hint="עובד מכל טלפון, בכל מקום"
+              hint="הזמנות נשלחות למספר WhatsApp הראשי"
             />
           ) : (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -131,6 +132,14 @@ export default function CustomerLinkCard() {
                 בכתובת דוגמה שלא פרסמת — היא תחזיר שגיאה 404.
               </p>
             </div>
+          )}
+
+          {data.publicLinkB && (
+            <LinkRow
+              label="קישור B — WhatsApp שני"
+              url={data.publicLinkB}
+              hint="אותו קטלוג, הזמנות נשלחות למספר WhatsApp אחר"
+            />
           )}
 
           {data.localLink && !data.isDeployed && (

@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { WhatsAppChannel } from "@/lib/types";
 
 const STORAGE_KEY = "catalog_store_login";
 
-export default function StoreLoginForm() {
+export default function StoreLoginForm({
+  channel = "default",
+}: {
+  channel?: WhatsAppChannel;
+}) {
   const [storeName, setStoreName] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +41,7 @@ export default function StoreLoginForm() {
       const response = await fetch("/api/auth/store/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeName, username, password }),
+        body: JSON.stringify({ storeName, username, password, channel }),
       });
 
       const data = await response.json();

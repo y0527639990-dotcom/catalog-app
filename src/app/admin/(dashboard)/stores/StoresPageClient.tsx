@@ -13,7 +13,9 @@ interface StoreRow {
 }
 
 function ChannelBadge({ channel }: { channel: WhatsAppChannel | undefined }) {
-  if (channel === "b") {
+  const value = channel ?? "default";
+
+  if (value === "b") {
     return (
       <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-800">
         קישור 2
@@ -21,7 +23,7 @@ function ChannelBadge({ channel }: { channel: WhatsAppChannel | undefined }) {
     );
   }
 
-  if (channel === "default") {
+  if (value === "default") {
     return (
       <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
         קישור 1

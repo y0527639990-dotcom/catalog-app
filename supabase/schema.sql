@@ -88,6 +88,15 @@ create table if not exists agent_accounts (
   created_at timestamptz not null default now()
 );
 
+create table if not exists store_link_tracking (
+  store_id uuid primary key references stores(id) on delete cascade,
+  signup_channel text not null default 'default'
+    check (signup_channel in ('default', 'b')),
+  last_login_channel text not null default 'default'
+    check (last_login_channel in ('default', 'b')),
+  updated_at timestamptz not null default now()
+);
+
 -- מנהל ראשי (שליטה מלאה על לקוחות)
 create table if not exists super_admin_settings (
   id int primary key default 1 check (id = 1),

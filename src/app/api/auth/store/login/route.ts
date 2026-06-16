@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { hashPassword, setSession, verifyPassword } from "@/lib/auth";
-import { insertStore, updateLastLoginChannel } from "@/lib/store-channels";
+import { insertStore, trackStoreLogin } from "@/lib/store-channels";
 import type { WhatsAppChannel } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -42,15 +42,11 @@ export async function POST(request: Request) {
     let store = existing;
 
     if (!store) {
-      const { data: created, error: createError } = await insertStore(
-        supabase,
-        {
+      const { data: created, error: createError } = await insertStore(supabase, {
           store_name: trimmedStore,
           username: trimmedUser,
           password_hash: await hashPassword(trimmedPassword),
-        },
-        channelValue,
-      );
+        });
 
       if (createError) {
         if (createError.code === "23505") {
@@ -68,9 +64,9 @@ export async function POST(request: Request) {
       if (!valid) {
         return NextResponse.json({ error: "סיסמה שגויה" }, { status: 401 });
       }
-
-      await updateLastLoginChannel(supabase, store.id, channelValue);
     }
+
+    await trackStoreLogin(supabase, store.id, channelValue, !existing);
 
     await setSession({
       role: "store",

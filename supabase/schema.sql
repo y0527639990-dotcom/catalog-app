@@ -9,6 +9,8 @@ create table if not exists stores (
   store_name text not null,
   username text not null default 'ראשי',
   password_hash text not null,
+  signup_channel text not null default 'default' check (signup_channel in ('default', 'b')),
+  last_login_channel text not null default 'default' check (last_login_channel in ('default', 'b')),
   created_at timestamptz not null default now(),
   unique (store_name, username)
 );

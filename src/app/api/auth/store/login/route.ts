@@ -36,6 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: lookupError.message }, { status: 500 });
     }
 
+    const channelValue = channel === "b" ? "b" : "default";
     let store = existing;
 
     if (!store) {
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
           store_name: trimmedStore,
           username: trimmedUser,
           password_hash: await hashPassword(trimmedPassword),
+          signup_channel: channelValue,
+          last_login_channel: channelValue,
         })
         .select("id, store_name, username, password_hash")
         .single();
@@ -65,6 +68,15 @@ export async function POST(request: Request) {
       if (!valid) {
         return NextResponse.json({ error: "סיסמה שגויה" }, { status: 401 });
       }
+
+      const { error: channelError } = await supabase
+        .from("stores")
+        .update({ last_login_channel: channelValue })
+        .eq("id", store.id);
+
+      if (channelError) {
+        return NextResponse.json({ error: channelError.message }, { status: 500 });
+      }
     }
 
     await setSession({
@@ -72,7 +84,7 @@ export async function POST(request: Request) {
       storeId: store.id,
       storeName: store.store_name,
       username: store.username,
-      whatsappChannel: channel === "b" ? "b" : "default",
+      whatsappChannel: channelValue,
     });
 
     return NextResponse.json({

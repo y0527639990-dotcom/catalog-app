@@ -39,6 +39,8 @@ export interface Store {
   store_name: string;
   username: string;
   created_at: string;
+  signup_channel?: WhatsAppChannel;
+  last_login_channel?: WhatsAppChannel;
 }
 
 export interface CartItem {

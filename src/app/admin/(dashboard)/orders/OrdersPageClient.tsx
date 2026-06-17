@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { StoreOrder, WhatsAppChannel } from "@/lib/types";
-import { formatOrderPrice, STORE_ORDERS_LIST_LIMIT } from "@/lib/store-orders";
+import {
+  formatOrderPrice,
+  STORE_ORDERS_MAX_RETAINED,
+} from "@/lib/store-orders";
 
 interface StoreOption {
   id: string;
@@ -25,7 +28,11 @@ function ChannelLabel({ channel }: { channel: WhatsAppChannel }) {
   );
 }
 
-export default function OrdersPageClient() {
+export default function OrdersPageClient({
+  isSuperAdmin,
+}: {
+  isSuperAdmin: boolean;
+}) {
   const [orders, setOrders] = useState<StoreOrder[]>([]);
   const [stores, setStores] = useState<StoreOption[]>([]);
   const [storeFilter, setStoreFilter] = useState("");
@@ -34,11 +41,13 @@ export default function OrdersPageClient() {
   const [totalSpent, setTotalSpent] = useState(0);
 
   useEffect(() => {
+    if (!isSuperAdmin) return;
+
     fetch("/api/admin/stores")
       .then((r) => r.json())
       .then((d) => setStores(d.stores ?? []))
       .catch(() => {});
-  }, []);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,36 +98,47 @@ export default function OrdersPageClient() {
 
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm sm:p-6">
-      <h2 className="text-xl font-bold">הזמנות לקוחות</h2>
+      <h2 className="text-xl font-bold">
+        {isSuperAdmin ? "הזמנות לקוחות" : "הזמנות — קישור 2"}
+      </h2>
       <p className="mt-2 text-sm text-gray-600">
-        כל ההזמנות שנשלחו ל-WhatsApp — מוצרים, סכומים והיסטוריה.
+        {isSuperAdmin
+          ? "כל ההזמנות שנשלחו ל-WhatsApp משני הקישורים — עם תיוג קישור 1 / קישור 2."
+          : "הזמנות מלקוחות שנכנסו דרך קישור 2 (/b/login) בלבד."}
       </p>
       <p className="mt-1 text-xs text-gray-500">
-        ההזמנות נשמרות בטבלה נפרדת ולא משפיעות על מהירות הקטלוג. מוצגות עד{" "}
-        {STORE_ORDERS_LIST_LIMIT} הזמנות אחרונות.
+        ההזמנות נשמרות בטבלה נפרדת ולא משפיעות על מהירות הקטלוג. נשמרות עד{" "}
+        {STORE_ORDERS_MAX_RETAINED} הזמנות אחרונות לכל קישור — ישנות נמחקות
+        אוטומטית.
       </p>
 
-      <div className="mt-4">
-        <label className="mb-1 block text-xs font-medium text-gray-600">
-          סינון לפי חנות
-        </label>
-        <select
-          value={storeFilter}
-          onChange={(e) => setStoreFilter(e.target.value)}
-          className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm sm:max-w-md"
-        >
-          <option value="">כל החנויות</option>
-          {stores.map((store) => (
-            <option key={store.id} value={store.id}>
-              {store.store_name} — {store.username}
-            </option>
-          ))}
-        </select>
-      </div>
+      {isSuperAdmin && (
+        <div className="mt-4">
+          <label className="mb-1 block text-xs font-medium text-gray-600">
+            סינון לפי חנות
+          </label>
+          <select
+            value={storeFilter}
+            onChange={(e) => setStoreFilter(e.target.value)}
+            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm sm:max-w-md"
+          >
+            <option value="">כל החנויות</option>
+            {stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.store_name} — {store.username}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {!loading && !error && orderCount > 0 && (
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <span className="rounded-lg bg-gray-100 px-3 py-1.5">{storeLabel}</span>
+          {isSuperAdmin && (
+            <span className="rounded-lg bg-gray-100 px-3 py-1.5">
+              {storeLabel}
+            </span>
+          )}
           <span className="rounded-lg bg-gray-100 px-3 py-1.5">
             {orderCount} הזמנות
           </span>
@@ -140,7 +160,9 @@ export default function OrdersPageClient() {
         <p className="mt-6 text-gray-600">טוען הזמנות...</p>
       ) : !error && orderCount === 0 ? (
         <p className="mt-6 text-gray-600">
-          עדיין אין הזמנות שמורות. הזמנות יופיעו כאן מרגע שליחה ל-WhatsApp.
+          {isSuperAdmin
+            ? "עדיין אין הזמנות שמורות. הזמנות יופיעו כאן מרגע שליחה ל-WhatsApp."
+            : "עדיין אין הזמנות מקישור 2. הזמנות יופיעו כאן מרגע שליחה ל-WhatsApp."}
         </p>
       ) : (
         <div className="mt-6 space-y-4">
@@ -152,12 +174,16 @@ export default function OrdersPageClient() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-bold text-gray-900">{order.store_name}</p>
-                  <p className="text-sm text-gray-600">משתמש: {order.username}</p>
+                  <p className="text-sm text-gray-600">
+                    משתמש: {order.username}
+                  </p>
                   <p className="mt-1 text-sm text-gray-500">
                     {new Date(order.created_at).toLocaleString("he-IL")}
                   </p>
                 </div>
-                <ChannelLabel channel={order.whatsapp_channel} />
+                {isSuperAdmin && (
+                  <ChannelLabel channel={order.whatsapp_channel} />
+                )}
               </div>
 
               <ul className="mt-3 space-y-2 text-sm">

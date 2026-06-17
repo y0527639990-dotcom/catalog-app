@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 const links = [
   { href: "/admin", label: "קטלוג" },
-  { href: "/admin/orders", label: "הזמנות", superAdminOnly: true },
+  { href: "/admin/orders", label: "הזמנות" },
   { href: "/admin/stores", label: "חנויות", superAdminOnly: true },
   { href: "/admin/settings", label: "הגדרות" },
 ];

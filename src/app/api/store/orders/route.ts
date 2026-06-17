@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireStoreSession } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
+import { trimStoreOrdersForChannel } from "@/lib/store-orders";
 import type { StoreOrderItem, WhatsAppChannel } from "@/lib/types";
 
 function parseItems(raw: unknown): StoreOrderItem[] | null {
@@ -80,6 +81,8 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await trimStoreOrdersForChannel(supabase, channel);
 
   return NextResponse.json({ success: true, orderId: data.id });
 }

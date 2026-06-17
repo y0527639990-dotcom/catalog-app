@@ -250,7 +250,11 @@ export default function AdminCatalogPage() {
 
     if (response.ok) {
       await loadProducts(true);
-      setMessage("התמונה עודכנה מריווחית");
+      setMessage(
+        data.imageUrl
+          ? "התמונה הורדה מריווחית ונשמרה בקטלוג"
+          : "התמונה עודכנה מריווחית",
+      );
     } else {
       setError(data.error || "שגיאה בעדכון תמונה");
     }

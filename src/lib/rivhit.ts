@@ -72,6 +72,36 @@ export function resolveImageUrl(pictureLink: string | null): string | null {
   return `https://api.rivhit.co.il/${cleaned}`;
 }
 
+export function withImageCacheBuster(
+  url: string | null,
+  version?: string | number | null,
+): string | null {
+  if (!url) return null;
+  if (version == null || version === "") return url;
+
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}v=${encodeURIComponent(String(version))}`;
+}
+
+export function resolveProductImage(
+  pictureLink: string | null,
+  override?: {
+    custom_image?: string | null;
+    updated_at?: string | null;
+  } | null,
+): string | null {
+  if (override?.custom_image) return override.custom_image;
+
+  const rivhitUrl = resolveImageUrl(pictureLink);
+  if (!rivhitUrl) return null;
+
+  const version = override?.updated_at
+    ? new Date(override.updated_at).getTime()
+    : null;
+
+  return withImageCacheBuster(rivhitUrl, version);
+}
+
 export function getSku(item: RivhitItem): string {
   return item.item_part_num?.trim() || String(item.item_id);
 }

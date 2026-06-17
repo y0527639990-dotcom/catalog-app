@@ -8,6 +8,7 @@ import {
   fetchRivhitItems,
   getSku,
   resolveImageUrl,
+  resolveProductImage,
 } from "@/lib/rivhit";
 import {
   ensureStagingCategory,
@@ -90,10 +91,7 @@ export async function GET(request: Request) {
         price: override?.custom_price ?? item.sale_nis,
         rivhitPrice: item.sale_nis,
         rivhitImage: resolveImageUrl(item.picture_link),
-        image:
-          override?.custom_image ||
-          resolveImageUrl(item.picture_link) ||
-          null,
+        image: resolveProductImage(item.picture_link, override),
         hasCustomImage: Boolean(override?.custom_image),
         isHidden: override?.is_hidden ?? false,
         categoryId: mapping?.category_id ?? null,
@@ -144,33 +142,38 @@ export async function PUT(request: Request) {
       clearRivhitItemsCache();
     }
 
-    if (categoryId) {
-      const { data: category } = await supabase
-        .from("categories")
-        .select("id, is_staging")
-        .eq("id", categoryId)
-        .maybeSingle();
+    if (categoryId !== undefined) {
+      if (categoryId) {
+        const { data: category } = await supabase
+          .from("categories")
+          .select("id, is_staging")
+          .eq("id", categoryId)
+          .maybeSingle();
 
-      if (!category) {
-        return NextResponse.json({ error: "קטגוריה לא נמצאה" }, { status: 400 });
+        if (!category) {
+          return NextResponse.json(
+            { error: "קטגוריה לא נמצאה" },
+            { status: 400 },
+          );
+        }
+
+        await supabase.from("product_mappings").upsert(
+          {
+            rivhit_item_id: itemId,
+            category_id: categoryId,
+          },
+          { onConflict: "rivhit_item_id" },
+        );
+      } else {
+        const staging = await ensureStagingCategory(supabase);
+        await supabase.from("product_mappings").upsert(
+          {
+            rivhit_item_id: itemId,
+            category_id: staging.id,
+          },
+          { onConflict: "rivhit_item_id" },
+        );
       }
-
-      await supabase.from("product_mappings").upsert(
-        {
-          rivhit_item_id: itemId,
-          category_id: categoryId,
-        },
-        { onConflict: "rivhit_item_id" },
-      );
-    } else {
-      const staging = await ensureStagingCategory(supabase);
-      await supabase.from("product_mappings").upsert(
-        {
-          rivhit_item_id: itemId,
-          category_id: staging.id,
-        },
-        { onConflict: "rivhit_item_id" },
-      );
     }
 
     const { data: existingOverride } = await supabase

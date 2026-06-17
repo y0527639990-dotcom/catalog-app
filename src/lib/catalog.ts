@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "./supabase/server";
-import { fetchRivhitItems, getSku, resolveImageUrl, clearRivhitItemsCache } from "./rivhit";
+import { fetchRivhitItems, getSku, resolveProductImage, clearRivhitItemsCache } from "./rivhit";
 import type { CatalogProduct, Category, ProductOverride, WhatsAppChannel } from "./types";
 import { buildWhatsAppOrderUrl as buildWaUrl, getWhatsAppNumber } from "./whatsapp";
 
@@ -88,10 +88,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
       sku,
       name: override?.custom_name || item.item_name,
       price: override?.custom_price ?? item.sale_nis,
-      image:
-        override?.custom_image ||
-        resolveImageUrl(item.picture_link) ||
-        null,
+      image: resolveProductImage(item.picture_link, override),
       categoryId: category.id,
       categoryName: category.name,
       categorySortOrder: category.sort_order,
@@ -110,7 +107,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
 
 export const getCachedCatalogProducts = unstable_cache(
   async () => getCatalogProducts(),
-  ["catalog-products-v1"],
+  ["catalog-products-v2"],
   { revalidate: 300, tags: [CATALOG_CACHE_TAG] },
 );
 

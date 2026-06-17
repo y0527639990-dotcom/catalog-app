@@ -73,8 +73,21 @@ export default function AdminCatalogPage() {
           initialStagingFilter.current = true;
         }
       }
-      if (data.syncedCount > 0) {
-        setMessage(`${data.syncedCount} מוצרים חדשים הועברו ל"${STAGING_CATEGORY_NAME}"`);
+      if (refresh) {
+        const count = data.products?.length ?? 0;
+        if (data.syncedCount > 0) {
+          setCategoryFilter(data.stagingCategoryId);
+          setFilter("");
+          setMessage(
+            `עודכן מ-Rivhit: ${count} מוצרים | ${data.syncedCount} חדשים ב"${STAGING_CATEGORY_NAME}"`,
+          );
+        } else {
+          setMessage(`עודכן מ-Rivhit: ${count} מוצרים`);
+        }
+      } else if (data.syncedCount > 0) {
+        setMessage(
+          `${data.syncedCount} מוצרים חדשים הועברו ל"${STAGING_CATEGORY_NAME}"`,
+        );
       }
     }
 
@@ -630,6 +643,7 @@ function ProductCard({
       {product.image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          key={product.image}
           src={product.image}
           alt={product.name}
           className="aspect-square w-full rounded-xl object-cover"

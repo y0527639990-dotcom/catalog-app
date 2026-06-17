@@ -15,6 +15,7 @@ export interface ProductOverride {
   custom_price: number | null;
   custom_image: string | null;
   is_hidden: boolean;
+  updated_at?: string | null;
 }
 
 export interface Category {

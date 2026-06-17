@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import StoreOrdersModal from "@/components/StoreOrdersModal";
 import type { WhatsAppChannel } from "@/lib/types";
 
 interface StoreRow {
@@ -40,6 +41,7 @@ export default function StoresPageClient() {
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [ordersStore, setOrdersStore] = useState<StoreRow | null>(null);
 
   async function loadStores() {
     const response = await fetch("/api/admin/stores");
@@ -219,18 +221,35 @@ export default function StoresPageClient() {
                       {new Date(store.created_at).toLocaleString("he-IL")}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => startEdit(store)}
-                    className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  >
-                    ערוך
-                  </button>
+                  <div className="flex shrink-0 flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setOrdersStore(store)}
+                      className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-medium text-violet-800"
+                    >
+                      הזמנות
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(store)}
+                      className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    >
+                      ערוך
+                    </button>
+                  </div>
                 </div>
               </div>
             ),
           )}
         </div>
+      )}
+
+      {ordersStore && (
+        <StoreOrdersModal
+          storeId={ordersStore.id}
+          storeName={ordersStore.store_name}
+          onClose={() => setOrdersStore(null)}
+        />
       )}
     </div>
   );

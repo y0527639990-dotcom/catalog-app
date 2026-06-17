@@ -97,6 +97,20 @@ create table if not exists store_link_tracking (
   updated_at timestamptz not null default now()
 );
 
+-- היסטוריית הזמנות לקוחות
+create table if not exists store_orders (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references stores(id) on delete cascade,
+  store_name text not null,
+  username text not null,
+  items jsonb not null default '[]',
+  total_amount numeric(10, 2) not null default 0,
+  notes text,
+  whatsapp_channel text not null default 'default'
+    check (whatsapp_channel in ('default', 'b')),
+  created_at timestamptz not null default now()
+);
+
 -- מנהל ראשי (שליטה מלאה על לקוחות)
 create table if not exists super_admin_settings (
   id int primary key default 1 check (id = 1),
@@ -112,3 +126,5 @@ on conflict (id) do nothing;
 create index if not exists idx_product_mappings_category on product_mappings(category_id);
 create index if not exists idx_product_mappings_item on product_mappings(rivhit_item_id);
 create index if not exists idx_categories_sort on categories(sort_order);
+create index if not exists idx_store_orders_store_id on store_orders(store_id);
+create index if not exists idx_store_orders_created_at on store_orders(created_at desc);

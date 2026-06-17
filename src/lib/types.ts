@@ -48,6 +48,26 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface StoreOrderItem {
+  sku: string;
+  name: string;
+  quantity: number;
+  unitPrice: number | null;
+  lineTotal: number | null;
+}
+
+export interface StoreOrder {
+  id: string;
+  store_id: string;
+  store_name: string;
+  username: string;
+  items: StoreOrderItem[];
+  total_amount: number;
+  notes: string | null;
+  whatsapp_channel: WhatsAppChannel;
+  created_at: string;
+}
+
 export interface RivhitCustomer {
   customer_id: number;
   last_name: string | null;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CartItem, CatalogProduct } from "@/lib/types";
+import type { CartItem, CatalogProduct, StoreOrderItem } from "@/lib/types";
 import { buildWhatsAppOrderUrl } from "@/lib/whatsapp";
 
 function buildWhatsAppUrl(
@@ -371,6 +371,49 @@ export default function CatalogView({
     window.location.href = "/login";
   }
 
+  async function sendOrder() {
+    if (cartItems.length === 0) {
+      alert("העגלה ריקה. הוסף מוצרים לפני שליחה.");
+      return;
+    }
+
+    const orderItems: StoreOrderItem[] = cartItems.map((item) => {
+      const product = skuToProduct.get(item.sku);
+      const unitPrice =
+        product?.price && product.price > 0 ? product.price : null;
+      const lineTotal =
+        unitPrice !== null ? unitPrice * item.quantity : null;
+
+      return {
+        sku: item.sku,
+        name: product?.name ?? item.sku,
+        quantity: item.quantity,
+        unitPrice,
+        lineTotal,
+      };
+    });
+
+    try {
+      await fetch("/api/store/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: orderItems,
+          totalAmount: cartTotal,
+          notes: notes.trim() || null,
+        }),
+      });
+    } catch {
+      // שליחה ל-WhatsApp גם אם השמירה נכשלה
+    }
+
+    window.open(
+      buildWhatsAppUrl(whatsappNumber, storeName, cartItems, notes),
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+
   return (
     <div className="mx-auto min-h-screen max-w-lg bg-gray-50 pb-28">
       <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white shadow-sm">
@@ -510,26 +553,16 @@ export default function CatalogView({
             placeholder="הערות (אופציונלי)"
             className="min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-sm"
           />
-          <a
-            href={
-              cartItems.length > 0
-                ? buildWhatsAppUrl(whatsappNumber, storeName, cartItems, notes)
-                : undefined
-            }
-            onClick={(e) => {
-              if (cartItems.length === 0) {
-                e.preventDefault();
-                alert("העגלה ריקה. הוסף מוצרים לפני שליחה.");
-              }
-            }}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={sendOrder}
+            disabled={cartItems.length === 0}
             className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold text-white ${
               cartItems.length > 0 ? "bg-green-600" : "bg-gray-400"
             }`}
           >
             שלח
-          </a>
+          </button>
         </div>
       </footer>
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { StoreOrder, WhatsAppChannel } from "@/lib/types";
-import { formatOrderPrice } from "@/lib/store-orders";
+import { formatOrderPrice, STORE_ORDERS_LIST_LIMIT } from "@/lib/store-orders";
 
 interface StoreOption {
   id: string;
@@ -92,6 +92,10 @@ export default function OrdersPageClient() {
       <h2 className="text-xl font-bold">הזמנות לקוחות</h2>
       <p className="mt-2 text-sm text-gray-600">
         כל ההזמנות שנשלחו ל-WhatsApp — מוצרים, סכומים והיסטוריה.
+      </p>
+      <p className="mt-1 text-xs text-gray-500">
+        ההזמנות נשמרות בטבלה נפרדת ולא משפיעות על מהירות הקטלוג. מוצגות עד{" "}
+        {STORE_ORDERS_LIST_LIMIT} הזמנות אחרונות.
       </p>
 
       <div className="mt-4">

@@ -232,7 +232,50 @@ export default function AdminCatalogPage() {
     });
   }
 
-  async function refreshProductImage(itemId: number) {
+  async function uploadProductImage(itemId: number, file: File) {
+    setSavingIds((prev) => new Set(prev).add(itemId));
+    setError("");
+
+    const formData = new FormData();
+    formData.append("itemId", String(itemId));
+    formData.append("file", file);
+
+    const response = await fetch("/api/admin/products/image", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.itemId === itemId
+            ? {
+                ...product,
+                image: data.imageUrl ?? product.image,
+                hasCustomImage: true,
+              }
+            : product,
+        ),
+      );
+      setMessage("התמונה נשמרה בקטלוג");
+    } else {
+      setError(data.error || "שגיאה בהעלאת תמונה");
+    }
+
+    setSavingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
+    });
+  }
+
+  async function removeProductImage(itemId: number) {
+    if (!confirm("להסיר את התמונה שהועלת? יוצג שוב מה שיש בריווחית (אם יש).")) {
+      return;
+    }
+
     setSavingIds((prev) => new Set(prev).add(itemId));
     setError("");
 
@@ -241,7 +284,6 @@ export default function AdminCatalogPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         itemId,
-        refreshFromRivhit: true,
         clearCustomImage: true,
       }),
     });
@@ -249,14 +291,10 @@ export default function AdminCatalogPage() {
     const data = await response.json();
 
     if (response.ok) {
-      await loadProducts(true);
-      setMessage(
-        data.imageUrl
-          ? "התמונה הורדה מריווחית ונשמרה בקטלוג"
-          : "התמונה עודכנה מריווחית",
-      );
+      await loadProducts(false);
+      setMessage("התמונה שהועלת הוסרה");
     } else {
-      setError(data.error || "שגיאה בעדכון תמונה");
+      setError(data.error || "שגיאה בהסרת תמונה");
     }
 
     setSavingIds((prev) => {
@@ -457,7 +495,10 @@ export default function AdminCatalogPage() {
                   onAssign={(categoryId) =>
                     saveCategory(product.itemId, categoryId)
                   }
-                  onRefreshImage={() => refreshProductImage(product.itemId)}
+                  onUploadImage={(file) =>
+                    uploadProductImage(product.itemId, file)
+                  }
+                  onRemoveImage={() => removeProductImage(product.itemId)}
                 />
               ))}
             </div>
@@ -635,15 +676,19 @@ function ProductCard({
   assignCategoryId,
   isSaving,
   onAssign,
-  onRefreshImage,
+  onUploadImage,
+  onRemoveImage,
 }: {
   product: AdminProduct;
   categories: Category[];
   assignCategoryId: string;
   isSaving: boolean;
   onAssign: (categoryId: string) => void;
-  onRefreshImage: () => void;
+  onUploadImage: (file: File) => void;
+  onRemoveImage: () => void;
 }) {
+  const fileInputId = `product-image-${product.itemId}`;
+
   return (
     <article
       className={`flex flex-col rounded-2xl border bg-white p-3 shadow-sm ${
@@ -682,16 +727,37 @@ function ProductCard({
       )}
 
       <div className="mt-auto space-y-2 pt-3">
-        <button
-          type="button"
+        <input
+          id={fileInputId}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
           disabled={isSaving}
-          onClick={onRefreshImage}
-          className="w-full rounded-xl border border-gray-300 py-2 text-xs font-medium text-gray-700 disabled:opacity-60"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) onUploadImage(file);
+            event.target.value = "";
+          }}
+        />
+        <label
+          htmlFor={fileInputId}
+          className={`flex w-full cursor-pointer items-center justify-center rounded-xl bg-emerald-600 py-2 text-xs font-semibold text-white ${
+            isSaving ? "pointer-events-none opacity-60" : "hover:bg-emerald-700"
+          }`}
         >
-          {product.hasCustomImage
-            ? "תמונה מריווחית (הסר תמונה מותאמת)"
-            : "רענן תמונה מריווחית"}
-        </button>
+          {isSaving ? "שומר..." : product.image ? "החלף תמונה" : "העלה תמונה"}
+        </label>
+
+        {product.hasCustomImage && (
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={onRemoveImage}
+            className="w-full rounded-xl border border-gray-300 py-2 text-xs font-medium text-gray-700 disabled:opacity-60"
+          >
+            הסר תמונה שהועלת
+          </button>
+        )}
 
         {assignCategoryId && (
           <button

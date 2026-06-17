@@ -15,7 +15,6 @@ import {
   ensureStagingCategory,
   syncNewItemsToStagingCategory,
 } from "@/lib/staging-category";
-import { syncProductImageFromRivhit } from "@/lib/rivhit-image-sync";
 import type { ProductOverride } from "@/lib/types";
 
 interface ProductMappingRow {
@@ -137,7 +136,6 @@ export async function PUT(request: Request) {
       customImage,
       isHidden,
       clearCustomImage,
-      refreshFromRivhit,
     } = body;
 
     if (!itemId) {
@@ -145,16 +143,6 @@ export async function PUT(request: Request) {
     }
 
     const supabase = createAdminClient();
-
-    let syncedImageUrl: string | null = null;
-
-    if (refreshFromRivhit) {
-      const syncResult = await syncProductImageFromRivhit(supabase, itemId);
-      if ("error" in syncResult) {
-        return NextResponse.json({ error: syncResult.error }, { status: 400 });
-      }
-      syncedImageUrl = syncResult.imageUrl;
-    }
 
     if (categoryId !== undefined) {
       if (categoryId) {
@@ -206,13 +194,11 @@ export async function PUT(request: Request) {
         customPrice !== undefined
           ? customPrice
           : (existingOverride?.custom_price ?? null),
-      custom_image: syncedImageUrl
-        ? syncedImageUrl
-        : clearCustomImage
-          ? null
-          : customImage !== undefined
-            ? customImage || null
-            : (existingOverride?.custom_image ?? null),
+      custom_image: clearCustomImage
+        ? null
+        : customImage !== undefined
+          ? customImage || null
+          : (existingOverride?.custom_image ?? null),
       is_hidden:
         isHidden !== undefined
           ? Boolean(isHidden)
@@ -229,10 +215,7 @@ export async function PUT(request: Request) {
     }
 
     revalidateTag(CATALOG_CACHE_TAG, "max");
-    return NextResponse.json({
-      success: true,
-      imageUrl: syncedImageUrl,
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "שגיאה בעדכון" },

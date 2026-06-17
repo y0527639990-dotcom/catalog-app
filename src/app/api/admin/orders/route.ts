@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireSuperAdminSession } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
-import { parseStoreOrderRow } from "@/lib/store-orders";
+import { parseStoreOrderRow, STORE_ORDERS_LIST_LIMIT } from "@/lib/store-orders";
 
 export async function GET(request: Request) {
   const session = await requireSuperAdminSession();
@@ -18,7 +18,8 @@ export async function GET(request: Request) {
     .select(
       "id, store_id, store_name, username, items, total_amount, notes, whatsapp_channel, created_at",
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(STORE_ORDERS_LIST_LIMIT);
 
   if (storeId) {
     query = query.eq("store_id", storeId);
@@ -39,5 +40,6 @@ export async function GET(request: Request) {
     orders,
     orderCount: orders.length,
     totalSpent,
+    limit: STORE_ORDERS_LIST_LIMIT,
   });
 }

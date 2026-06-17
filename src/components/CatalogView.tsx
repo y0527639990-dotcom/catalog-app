@@ -166,6 +166,8 @@ function ProductGrid({
                 <img
                   src={product.image}
                   alt={product.name}
+                  loading="lazy"
+                  decoding="async"
                   className="aspect-square w-full object-cover"
                 />
               </button>
@@ -526,6 +528,8 @@ export default function CatalogView({
                   <img
                     src={category.image}
                     alt={category.name}
+                    loading="lazy"
+                    decoding="async"
                     className="aspect-square w-full object-cover"
                   />
                 ) : (
@@ -609,6 +613,8 @@ export default function CatalogView({
                             <img
                               src={product.image}
                               alt={product.name}
+                              loading="lazy"
+                              decoding="async"
                               className="h-16 w-16 shrink-0 rounded-xl object-cover"
                             />
                           ) : (

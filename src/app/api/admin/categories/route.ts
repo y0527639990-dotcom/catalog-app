@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireAdminSession } from "@/lib/auth";
+import { CATALOG_CACHE_TAG } from "@/lib/catalog";
 
 export async function GET() {
   const session = await requireAdminSession();
@@ -47,6 +49,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidateTag(CATALOG_CACHE_TAG, "max");
   return NextResponse.json({ category: data });
 }
 
@@ -69,6 +72,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidateTag(CATALOG_CACHE_TAG, "max");
   return NextResponse.json({ success: true });
 }
 
@@ -120,6 +124,7 @@ export async function PATCH(request: Request) {
       .update({ sort_order: current.sort_order })
       .eq("id", neighbor.id);
 
+    revalidateTag(CATALOG_CACHE_TAG, "max");
     return NextResponse.json({ success: true });
   }
 
@@ -138,5 +143,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  revalidateTag(CATALOG_CACHE_TAG, "max");
   return NextResponse.json({ category: data });
 }

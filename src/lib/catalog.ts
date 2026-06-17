@@ -1,7 +1,10 @@
+import { unstable_cache } from "next/cache";
 import { createAdminClient } from "./supabase/server";
 import { fetchRivhitItems, getSku, resolveImageUrl } from "./rivhit";
 import type { CatalogProduct, Category, ProductOverride, WhatsAppChannel } from "./types";
 import { buildWhatsAppOrderUrl as buildWaUrl, getWhatsAppNumber } from "./whatsapp";
+
+export const CATALOG_CACHE_TAG = "catalog-products";
 
 function compareSku(a: string, b: string) {
   const numA = Number.parseInt(a, 10);
@@ -97,6 +100,12 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
 
   return products;
 }
+
+export const getCachedCatalogProducts = unstable_cache(
+  async () => getCatalogProducts(),
+  ["catalog-products-v1"],
+  { revalidate: 300, tags: [CATALOG_CACHE_TAG] },
+);
 
 export function buildWhatsAppOrderUrl(
   storeName: string,

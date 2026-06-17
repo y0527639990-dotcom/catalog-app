@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireAdminSession } from "@/lib/auth";
+import { CATALOG_CACHE_TAG } from "@/lib/catalog";
 import { fetchRivhitItems, getSku, resolveImageUrl } from "@/lib/rivhit";
 
 export async function GET() {
@@ -120,6 +122,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    revalidateTag(CATALOG_CACHE_TAG, "max");
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(

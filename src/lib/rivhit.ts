@@ -4,7 +4,7 @@ const RIVHIT_BASE =
   process.env.RIVHIT_API_URL ??
   "https://api.rivhit.co.il/online/RivhitOnlineAPI.svc";
 
-const RIVHIT_CACHE_TTL_MS = 5 * 60 * 1000;
+const RIVHIT_CACHE_TTL_MS = 15 * 60 * 1000;
 let rivhitItemsCache: { items: RivhitItem[]; fetchedAt: number } | null = null;
 
 interface RivhitResponse<T> {

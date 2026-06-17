@@ -1,12 +1,14 @@
 "use client";
 
 import CustomerLinkCard from "@/components/CustomerLinkCard";
-import { useEffect, useMemo, useState } from "react";
+import { STAGING_CATEGORY_NAME } from "@/lib/staging-category";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface Category {
   id: string;
   name: string;
   sort_order: number;
+  is_staging?: boolean;
 }
 
 interface AdminProduct {
@@ -15,8 +17,11 @@ interface AdminProduct {
   rivhitName: string;
   name: string;
   image: string | null;
+  rivhitImage?: string | null;
+  hasCustomImage?: boolean;
   categoryId: string | null;
   categoryName: string | null;
+  isStaging?: boolean;
 }
 
 const PAGE_SIZE = 48;
@@ -26,13 +31,17 @@ export default function AdminCatalogPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [newCategory, setNewCategory] = useState("");
   const [filter, setFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("none");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [stagingCategoryId, setStagingCategoryId] = useState<string | null>(
+    null,
+  );
   const [assignCategoryId, setAssignCategoryId] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
+  const initialStagingFilter = useRef(false);
 
   async function loadCategories() {
     const response = await fetch("/api/admin/categories");
@@ -42,11 +51,14 @@ export default function AdminCatalogPage() {
     }
   }
 
-  async function loadProducts() {
+  async function loadProducts(refresh = false) {
     setLoading(true);
     setError("");
 
-    const response = await fetch("/api/admin/products");
+    const url = refresh
+      ? "/api/admin/products?refresh=1"
+      : "/api/admin/products";
+    const response = await fetch(url);
     const data = await response.json();
 
     if (!response.ok) {
@@ -54,6 +66,16 @@ export default function AdminCatalogPage() {
       setProducts([]);
     } else {
       setProducts(data.products ?? []);
+      if (data.stagingCategoryId) {
+        setStagingCategoryId(data.stagingCategoryId);
+        if (!initialStagingFilter.current) {
+          setCategoryFilter(data.stagingCategoryId);
+          initialStagingFilter.current = true;
+        }
+      }
+      if (data.syncedCount > 0) {
+        setMessage(`${data.syncedCount} מוצרים חדשים הועברו ל"${STAGING_CATEGORY_NAME}"`);
+      }
     }
 
     setLoading(false);
@@ -159,35 +181,65 @@ export default function AdminCatalogPage() {
       body: JSON.stringify({
         itemId,
         categoryId: categoryId || null,
-        customName: "",
-        customPrice: null,
-        customImage: null,
-        isHidden: false,
       }),
     });
 
     const data = await response.json();
 
     if (response.ok) {
-      const categoryName =
-        categories.find((c) => c.id === categoryId)?.name ?? null;
+      const category = categories.find((c) => c.id === categoryId);
 
       setProducts((prev) =>
         prev.map((product) =>
           product.itemId === itemId
             ? {
                 ...product,
-                categoryId: categoryId || null,
-                categoryName,
+                categoryId: categoryId || stagingCategoryId,
+                categoryName: category?.name ?? STAGING_CATEGORY_NAME,
+                isStaging: category?.is_staging ?? !categoryId,
               }
             : product,
         ),
       );
 
       const product = products.find((p) => p.itemId === itemId);
-      setMessage(categoryId ? `שויך: ${product?.name}` : "הקטגוריה הוסרה");
+      setMessage(
+        categoryId && categoryId !== stagingCategoryId
+          ? `שויך לקטגוריה: ${product?.name}`
+          : `הועבר ל"${STAGING_CATEGORY_NAME}": ${product?.name}`,
+      );
     } else {
       setError(data.error || "שגיאה בשמירה");
+    }
+
+    setSavingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
+    });
+  }
+
+  async function refreshProductImage(itemId: number) {
+    setSavingIds((prev) => new Set(prev).add(itemId));
+    setError("");
+
+    const response = await fetch("/api/admin/products", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        itemId,
+        refreshFromRivhit: true,
+        clearCustomImage: true,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      await loadProducts(true);
+      setMessage("התמונה עודכנה מריווחית");
+    } else {
+      setError(data.error || "שגיאה בעדכון תמונה");
     }
 
     setSavingIds((prev) => {
@@ -206,9 +258,7 @@ export default function AdminCatalogPage() {
         product.sku.toLowerCase().includes(term);
 
       const matchesCategory =
-        categoryFilter === "all" ||
-        (categoryFilter === "none" && !product.categoryId) ||
-        product.categoryId === categoryFilter;
+        categoryFilter === "all" || product.categoryId === categoryFilter;
 
       return matchesSearch && matchesCategory;
     });
@@ -220,8 +270,12 @@ export default function AdminCatalogPage() {
     page * PAGE_SIZE,
   );
 
-  const assignedCount = products.filter((p) => p.categoryId).length;
-  const unassignedCount = products.length - assignedCount;
+  const stagingCount = products.filter(
+    (p) => p.categoryId === stagingCategoryId || p.isStaging,
+  ).length;
+  const liveCount = products.filter(
+    (p) => p.categoryId && p.categoryId !== stagingCategoryId,
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -230,13 +284,22 @@ export default function AdminCatalogPage() {
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <h2 className="text-2xl font-bold text-gray-900">ניהול קטלוג</h2>
         <p className="mt-2 text-sm text-gray-600">
-          בחר קטגוריה למטה, סנן מוצרים לפי תמונה ושם, ושייך בלחיצה אחת. השמירה
-          אוטומטית — הסינון לא מתאפס.
+          מוצר חדש מ-Rivhit נכנס אוטומטית ל&quot;{STAGING_CATEGORY_NAME}&quot;
+          (מנהלים בלבד). משם גוררים לקטegoria האמיתית — ואז הלקוחות רואים.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => loadProducts(true)}
+            className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800"
+          >
+            רענן מ-Rivhit
+          </button>
+        </div>
         <p className="mt-2 text-sm font-medium text-emerald-700">
           {loading
             ? "טוען..."
-            : `${products.length} מוצרים | ${assignedCount} משויכים | ${unassignedCount} ללא קטגוריה`}
+            : `${products.length} מוצרים | ${stagingCount} חדשים | ${liveCount} בקטלוג ללקוחות`}
         </p>
       </section>
 
@@ -307,17 +370,21 @@ export default function AdminCatalogPage() {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <FilterPill
-            active={categoryFilter === "none"}
-            onClick={() => setCategoryFilter("none")}
-            label={`ללא קטגוריה (${unassignedCount})`}
-          />
+          {stagingCategoryId && (
+            <FilterPill
+              active={categoryFilter === stagingCategoryId}
+              onClick={() => setCategoryFilter(stagingCategoryId)}
+              label={`${STAGING_CATEGORY_NAME} (${stagingCount})`}
+            />
+          )}
           <FilterPill
             active={categoryFilter === "all"}
             onClick={() => setCategoryFilter("all")}
             label={`הכל (${products.length})`}
           />
-          {categories.map((category) => {
+          {categories
+            .filter((c) => !c.is_staging)
+            .map((category) => {
             const count = products.filter(
               (p) => p.categoryId === category.id,
             ).length;
@@ -346,17 +413,14 @@ export default function AdminCatalogPage() {
         {loading ? (
           <p className="mt-6 text-gray-600">טוען מוצרים מ-Rivhit...</p>
         ) : filteredProducts.length === 0 ? (
-          <p className="mt-6 text-gray-600">
-            {categoryFilter === "none"
-              ? "כל המוצרים כבר משויכים לקטגוריה!"
-              : "לא נמצאו מוצרים."}
-          </p>
+          <p className="mt-6 text-gray-600">לא נמצאו מוצרים.</p>
         ) : (
           <>
             <p className="mt-4 text-sm text-gray-500">
               מציג {pagedProducts.length} מתוך {filteredProducts.length} מוצרים
-              {categoryFilter === "none" &&
-                " — אחרי שיוך, המוצר ייעלם מהרשימה"}
+              {stagingCategoryId &&
+                categoryFilter === stagingCategoryId &&
+                " — שייך לקטגוריה כדי שהלקוחות יראו"}
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
@@ -364,12 +428,13 @@ export default function AdminCatalogPage() {
                 <ProductCard
                   key={product.itemId}
                   product={product}
-                  categories={categories}
+                  categories={categories.filter((c) => !c.is_staging)}
                   assignCategoryId={assignCategoryId}
                   isSaving={savingIds.has(product.itemId)}
                   onAssign={(categoryId) =>
                     saveCategory(product.itemId, categoryId)
                   }
+                  onRefreshImage={() => refreshProductImage(product.itemId)}
                 />
               ))}
             </div>
@@ -465,8 +530,17 @@ function CategoryChip({
 
   return (
     <span className="flex w-full items-center justify-between gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
-      <span className="font-medium">{category.name}</span>
+      <span className="font-medium">
+        {category.name}
+        {category.is_staging && (
+          <span className="mr-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+            מנהלים בלבד
+          </span>
+        )}
+      </span>
       <span className="flex items-center gap-2">
+        {!category.is_staging && (
+          <>
         <button
           type="button"
           disabled={isFirst}
@@ -501,6 +575,8 @@ function CategoryChip({
         >
           ×
         </button>
+          </>
+        )}
       </span>
     </span>
   );
@@ -536,12 +612,14 @@ function ProductCard({
   assignCategoryId,
   isSaving,
   onAssign,
+  onRefreshImage,
 }: {
   product: AdminProduct;
   categories: Category[];
   assignCategoryId: string;
   isSaving: boolean;
   onAssign: (categoryId: string) => void;
+  onRefreshImage: () => void;
 }) {
   return (
     <article
@@ -568,12 +646,29 @@ function ProductCard({
       <p className="mt-1 text-xs text-gray-500">מק&quot;ט: {product.sku}</p>
 
       {product.categoryName && (
-        <span className="mt-2 inline-block rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-800">
+        <span
+          className={`mt-2 inline-block rounded-full px-2 py-1 text-xs ${
+            product.isStaging
+              ? "bg-amber-50 text-amber-900"
+              : "bg-emerald-50 text-emerald-800"
+          }`}
+        >
           {product.categoryName}
         </span>
       )}
 
       <div className="mt-auto space-y-2 pt-3">
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={onRefreshImage}
+          className="w-full rounded-xl border border-gray-300 py-2 text-xs font-medium text-gray-700 disabled:opacity-60"
+        >
+          {product.hasCustomImage
+            ? "תמונה מריווחית (הסר תמונה מותאמת)"
+            : "רענן תמונה מריווחית"}
+        </button>
+
         {assignCategoryId && (
           <button
             type="button"
@@ -591,7 +686,7 @@ function ProductCard({
           onChange={(e) => onAssign(e.target.value)}
           className="w-full rounded-lg border border-gray-300 px-2 py-2 text-xs"
         >
-          <option value="">ללא קטגוריה</option>
+          <option value="">החזר למוצרים חדשים</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}

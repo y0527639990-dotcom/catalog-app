@@ -13,7 +13,7 @@ export async function GET() {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, sort_order")
+    .select("id, name, sort_order, is_staging")
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -66,6 +66,23 @@ export async function DELETE(request: Request) {
   }
 
   const supabase = createAdminClient();
+  const { data: category, error: lookupError } = await supabase
+    .from("categories")
+    .select("is_staging")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (lookupError) {
+    return NextResponse.json({ error: lookupError.message }, { status: 500 });
+  }
+
+  if (category?.is_staging) {
+    return NextResponse.json(
+      { error: "לא ניתן למחוק את קטגוריית מוצרים חדשים" },
+      { status: 400 },
+    );
+  }
+
   const { error } = await supabase.from("categories").delete().eq("id", id);
 
   if (error) {
@@ -90,6 +107,23 @@ export async function PATCH(request: Request) {
   }
 
   const supabase = createAdminClient();
+
+  const { data: existingCategory, error: categoryError } = await supabase
+    .from("categories")
+    .select("is_staging")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (categoryError) {
+    return NextResponse.json({ error: categoryError.message }, { status: 500 });
+  }
+
+  if (existingCategory?.is_staging && name !== undefined) {
+    return NextResponse.json(
+      { error: "לא ניתן לשנות את שם קטגוריית מוצרים חדשים" },
+      { status: 400 },
+    );
+  }
 
   if (move === "up" || move === "down") {
     const { data: categories, error: listError } = await supabase

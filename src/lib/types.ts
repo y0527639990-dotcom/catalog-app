@@ -21,6 +21,7 @@ export interface Category {
   id: string;
   name: string;
   sort_order: number;
+  is_staging?: boolean;
 }
 
 export interface CatalogProduct {

@@ -3,28 +3,28 @@ import { requireSuperAdminSession } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { parseStoreOrderRow } from "@/lib/store-orders";
 
-export async function GET(
-  _request: Request,
-  context: { params: Promise<{ storeId: string }> },
-) {
+export async function GET(request: Request) {
   const session = await requireSuperAdminSession();
   if (!session) {
     return NextResponse.json({ error: "לא מורשה" }, { status: 403 });
   }
 
-  const { storeId } = await context.params;
-  if (!storeId) {
-    return NextResponse.json({ error: "חסר מזהה חנות" }, { status: 400 });
-  }
+  const { searchParams } = new URL(request.url);
+  const storeId = searchParams.get("storeId");
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("store_orders")
     .select(
       "id, store_id, store_name, username, items, total_amount, notes, whatsapp_channel, created_at",
     )
-    .eq("store_id", storeId)
     .order("created_at", { ascending: false });
+
+  if (storeId) {
+    query = query.eq("store_id", storeId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -35,5 +35,9 @@ export async function GET(
   );
   const totalSpent = orders.reduce((sum, order) => sum + order.total_amount, 0);
 
-  return NextResponse.json({ orders, totalSpent, orderCount: orders.length });
+  return NextResponse.json({
+    orders,
+    orderCount: orders.length,
+    totalSpent,
+  });
 }

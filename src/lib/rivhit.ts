@@ -60,6 +60,10 @@ export async function fetchRivhitItems(): Promise<RivhitItem[]> {
   return items;
 }
 
+export function clearRivhitItemsCache() {
+  rivhitItemsCache = null;
+}
+
 export function resolveImageUrl(pictureLink: string | null): string | null {
   if (!pictureLink) return null;
   if (pictureLink.startsWith("http")) return pictureLink;

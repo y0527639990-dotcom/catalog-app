@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 
 const links = [
   { href: "/admin", label: "קטלוג" },
-  { href: "/admin/stores", label: "חנויות" },
+  { href: "/admin/orders", label: "הזמנות", superAdminOnly: true },
+  { href: "/admin/stores", label: "חנויות", superAdminOnly: true },
   { href: "/admin/settings", label: "הגדרות" },
 ];
 
@@ -48,7 +49,7 @@ export default function AdminNav() {
       </div>
       <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3">
         {links
-          .filter((link) => link.href !== "/admin/stores" || isSuperAdmin)
+          .filter((link) => !link.superAdminOnly || isSuperAdmin)
           .map((link) => (
           <Link
             key={link.href}

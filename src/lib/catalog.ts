@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "./supabase/server";
-import { fetchRivhitItems, getSku, resolveImageUrl } from "./rivhit";
+import { fetchRivhitItems, getSku, resolveImageUrl, clearRivhitItemsCache } from "./rivhit";
 import type { CatalogProduct, Category, ProductOverride, WhatsAppChannel } from "./types";
 import { buildWhatsAppOrderUrl as buildWaUrl, getWhatsAppNumber } from "./whatsapp";
 
@@ -13,15 +13,22 @@ function compareSku(a: string, b: string) {
   return a.localeCompare(b, "he", { numeric: true });
 }
 
-export async function getCategories(): Promise<Category[]> {
+export async function getCategories(options?: {
+  includeStaging?: boolean;
+}): Promise<Category[]> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, sort_order")
+    .select("id, name, sort_order, is_staging")
     .order("sort_order", { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  const categories = (data ?? []) as Category[];
+  if (options?.includeStaging) {
+    return categories;
+  }
+  return categories.filter((c) => !c.is_staging);
 }
 
 export async function getOverridesMap(): Promise<Map<number, ProductOverride>> {

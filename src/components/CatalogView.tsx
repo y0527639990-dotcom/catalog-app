@@ -34,7 +34,6 @@ interface CategoryGroup {
   name: string;
   sortOrder: number;
   products: CatalogProduct[];
-  image: string | null;
 }
 
 function formatPrice(price: number) {
@@ -272,16 +271,12 @@ export default function CatalogView({
       const existing = map.get(product.categoryId);
       if (existing) {
         existing.products.push(product);
-        if (!existing.image && product.image) {
-          existing.image = product.image;
-        }
       } else {
         map.set(product.categoryId, {
           id: product.categoryId,
           name: product.categoryName,
           sortOrder: product.categorySortOrder,
           products: [product],
-          image: product.image,
         });
       }
     }
@@ -296,7 +291,7 @@ export default function CatalogView({
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const isSearching = search.trim().length > 0;
   const onCategoryPage = Boolean(selectedCategory);
-  const showBack = onCategoryPage || isSearching;
+  const browsingProducts = onCategoryPage || (isSearching && !onCategoryPage);
 
   const searchResults = useMemo(() => {
     if (!isSearching) return [];
@@ -363,9 +358,16 @@ export default function CatalogView({
     }, 0);
   }, [cartItems, skuToProduct]);
 
+  function openCategory(categoryId: string) {
+    setSelectedCategoryId(categoryId);
+    setSearch("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function goToCategories() {
     setSelectedCategoryId(null);
     setSearch("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function logout() {
@@ -420,31 +422,19 @@ export default function CatalogView({
     <div className="mx-auto min-h-screen max-w-lg bg-gray-50 pb-28">
       <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white shadow-sm">
         <div className="flex items-center gap-2 px-4 py-3">
-          {showBack ? (
-            <button
-              onClick={goToCategories}
-              className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800"
-            >
-              ← קטגוריות
-            </button>
-          ) : (
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs text-gray-500">שלום,</p>
-              <h1 className="truncate text-base font-bold text-emerald-800">
-                {storeName}
-              </h1>
-            </div>
-          )}
-
-          {showBack && (
-            <div className="min-w-0 flex-1 text-center">
-              <p className="truncate text-sm font-bold text-gray-900">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs text-gray-500">שלום,</p>
+            <h1 className="truncate text-base font-bold text-emerald-800">
+              {storeName}
+            </h1>
+            {browsingProducts && (
+              <p className="truncate text-sm font-medium text-gray-700">
                 {isSearching && !onCategoryPage
-                  ? "חיפוש"
+                  ? `חיפוש: ${search.trim()}`
                   : selectedCategory?.name}
               </p>
-            </div>
-          )}
+            )}
+          </div>
 
           <button
             type="button"
@@ -468,8 +458,43 @@ export default function CatalogView({
           </button>
         </div>
 
+        {browsingProducts && (
+          <button
+            type="button"
+            onClick={goToCategories}
+            className="flex w-full items-center justify-center gap-2 border-t border-emerald-200 bg-emerald-600 px-4 py-3.5 text-base font-bold text-white active:bg-emerald-700"
+          >
+            <span aria-hidden="true">→</span>
+            חזרה לקטגוריות
+          </button>
+        )}
+
+        {onCategoryPage && categories.length > 1 && (
+          <div className="border-t border-gray-100 bg-gray-50 px-4 py-2">
+            <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategoryId(category.id);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                    category.id === selectedCategoryId
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "border border-gray-200 bg-white text-gray-700"
+                  }`}
+                >
+                  {category.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {categories.length > 0 && (
-          <div className="space-y-2 px-4 pb-3">
+          <div className="space-y-2 px-4 pb-3 pt-2">
             <input
               type="search"
               value={search}
@@ -490,7 +515,7 @@ export default function CatalogView({
         )}
       </header>
 
-      <main className="px-4 py-4">
+      <main className="scroll-smooth px-4 py-4">
         {categories.length === 0 ? (
           <div className="rounded-2xl bg-white p-6 text-center text-gray-600 shadow">
             <p className="font-medium">הקטלוג עדיין ריק</p>
@@ -516,33 +541,29 @@ export default function CatalogView({
             showPrices={showPrices}
           />
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <p className="px-1 text-sm text-gray-600">בחר קטגוריה:</p>
             {categories.map((category) => (
               <button
                 key={category.id}
-                onClick={() => setSelectedCategoryId(category.id)}
-                className="overflow-hidden rounded-2xl bg-white text-right shadow-sm"
+                type="button"
+                onClick={() => openCategory(category.id)}
+                className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-4 text-right shadow-sm transition active:border-emerald-300 active:bg-emerald-50"
               >
-                {category.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    loading="lazy"
-                    decoding="async"
-                    className="aspect-square w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex aspect-square w-full items-center justify-center bg-emerald-100 text-3xl">
-                    📦
-                  </div>
-                )}
-                <div className="p-3">
-                  <h3 className="font-bold text-gray-900">{category.name}</h3>
-                  <p className="mt-1 text-xs text-gray-500">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-bold text-gray-900">
+                    {category.name}
+                  </h3>
+                  <p className="mt-0.5 text-sm text-gray-500">
                     {category.products.length} מוצרים
                   </p>
                 </div>
+                <span
+                  className="mr-3 shrink-0 text-xl text-emerald-600"
+                  aria-hidden="true"
+                >
+                  ‹
+                </span>
               </button>
             ))}
           </div>

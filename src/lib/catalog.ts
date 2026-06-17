@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createAdminClient } from "./supabase/server";
+import { fetchAllRows } from "./supabase/fetch-all";
 import { fetchRivhitItems, getSku, resolveProductImage, clearRivhitItemsCache } from "./rivhit";
 import type { CatalogProduct, Category, ProductOverride, WhatsAppChannel } from "./types";
 import { buildWhatsAppOrderUrl as buildWaUrl, getWhatsAppNumber } from "./whatsapp";
@@ -33,30 +34,29 @@ export async function getCategories(options?: {
 
 export async function getOverridesMap(): Promise<Map<number, ProductOverride>> {
   const supabase = createAdminClient();
-  const { data, error } = await supabase.from("product_overrides").select("*");
-
-  if (error) throw new Error(error.message);
+  const data = await fetchAllRows<ProductOverride>(
+    supabase,
+    "product_overrides",
+  );
 
   const map = new Map<number, ProductOverride>();
-  for (const row of data ?? []) {
-    map.set(row.rivhit_item_id, row as ProductOverride);
+  for (const row of data) {
+    map.set(row.rivhit_item_id, row);
   }
   return map;
 }
 
 export async function getCatalogProducts(): Promise<CatalogProduct[]> {
-  const [items, categories, overrides, mappingsResult] = await Promise.all([
+  const [items, categories, overrides, mappings] = await Promise.all([
     fetchRivhitItems(),
     getCategories(),
     getOverridesMap(),
-    createAdminClient()
-      .from("product_mappings")
-      .select("rivhit_item_id, category_id, sort_order"),
+    fetchAllRows<{ rivhit_item_id: number; category_id: string; sort_order: number }>(
+      createAdminClient(),
+      "product_mappings",
+      "rivhit_item_id, category_id, sort_order",
+    ),
   ]);
-
-  if (mappingsResult.error) {
-    throw new Error(mappingsResult.error.message);
-  }
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const mappingByItem = new Map<
@@ -64,7 +64,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
     { category_id: string; sort_order: number }
   >();
 
-  for (const mapping of mappingsResult.data ?? []) {
+  for (const mapping of mappings) {
     mappingByItem.set(mapping.rivhit_item_id, mapping);
   }
 
@@ -107,7 +107,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
 
 export const getCachedCatalogProducts = unstable_cache(
   async () => getCatalogProducts(),
-  ["catalog-products-v2"],
+  ["catalog-products-v3"],
   { revalidate: 300, tags: [CATALOG_CACHE_TAG] },
 );
 

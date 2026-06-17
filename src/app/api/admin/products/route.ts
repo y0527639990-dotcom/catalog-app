@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 import { requireAdminSession } from "@/lib/auth";
 import { CATALOG_CACHE_TAG } from "@/lib/catalog";
 import {
@@ -14,6 +15,13 @@ import {
   ensureStagingCategory,
   syncNewItemsToStagingCategory,
 } from "@/lib/staging-category";
+import type { ProductOverride } from "@/lib/types";
+
+interface ProductMappingRow {
+  rivhit_item_id: number;
+  category_id: string;
+  sort_order?: number;
+}
 
 export async function GET(request: Request) {
   const session = await requireAdminSession();
@@ -33,20 +41,21 @@ export async function GET(request: Request) {
 
     const [overridesResult, mappingsResult, categoriesResult] =
       await Promise.all([
-        supabase.from("product_overrides").select("*"),
-        supabase.from("product_mappings").select("*"),
+        fetchAllRows<ProductOverride>(supabase, "product_overrides"),
+        fetchAllRows<ProductMappingRow>(supabase, "product_mappings"),
         supabase
           .from("categories")
           .select("id, name, sort_order, is_staging")
           .order("sort_order", { ascending: true }),
       ]);
 
-    if (overridesResult.error) throw new Error(overridesResult.error.message);
-    if (mappingsResult.error) throw new Error(mappingsResult.error.message);
     if (categoriesResult.error) throw new Error(categoriesResult.error.message);
 
+    const overridesData = overridesResult;
+    const mappingsData = mappingsResult;
+
     const mappedIds = new Set(
-      (mappingsResult.data ?? []).map((row) => row.rivhit_item_id as number),
+      mappingsData.map((row) => row.rivhit_item_id as number),
     );
     const syncedCount = await syncNewItemsToStagingCategory(
       supabase,
@@ -61,13 +70,11 @@ export async function GET(request: Request) {
 
     const mappings =
       syncedCount > 0
-        ? (
-            await supabase.from("product_mappings").select("*")
-          ).data ?? mappingsResult.data ?? []
-        : mappingsResult.data ?? [];
+        ? await fetchAllRows<ProductMappingRow>(supabase, "product_mappings")
+        : mappingsData;
 
     const overrides = new Map(
-      (overridesResult.data ?? []).map((row) => [row.rivhit_item_id, row]),
+      overridesData.map((row) => [row.rivhit_item_id, row]),
     );
     const mappingsMap = new Map(
       mappings.map((row) => [row.rivhit_item_id, row]),

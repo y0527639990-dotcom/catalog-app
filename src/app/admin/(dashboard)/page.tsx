@@ -377,10 +377,16 @@ export default function AdminCatalogPage() {
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="חיפוש לפי שם או מק״ט"
+            placeholder="חיפוש לפי שם או מק״ט — למשל: 4028"
             className="flex-1 rounded-xl border border-gray-300 px-4 py-3"
           />
         </div>
+        {!filter.trim() && stagingCount > PAGE_SIZE && (
+          <p className="mt-2 text-sm text-amber-800">
+            יש {stagingCount} מוצרים ב&quot;{STAGING_CATEGORY_NAME}&quot; — חפש
+            לפי מק&quot;ט כדי למצוא מהר (מוצגים {PAGE_SIZE} בכל עמוד).
+          </p>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-2">
           {stagingCategoryId && (

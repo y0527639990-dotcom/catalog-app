@@ -423,6 +423,12 @@ export default function CatalogView({
     }));
   }
 
+  function clearOrderState() {
+    setCart({});
+    setNotes("");
+    setCartOpen(false);
+  }
+
   async function sendOrderViaWhatsApp() {
     if (cartItems.length === 0) {
       alert("העגלה ריקה. הוסף מוצרים לפני שליחה.");
@@ -442,6 +448,8 @@ export default function CatalogView({
       "_blank",
       "noopener,noreferrer",
     );
+
+    clearOrderState();
   }
 
   async function sendOrderViaEmail() {
@@ -450,16 +458,23 @@ export default function CatalogView({
       return;
     }
 
+    const items = orderItemsForSend();
+    const orderNotes = notes;
+    const total = cartTotal;
+
     await persistOrder();
 
     const email = getOrderEmail(whatsappChannel);
-    window.location.href = buildEmailOrderUrl(
+    const mailtoUrl = buildEmailOrderUrl(
       email,
       storeName,
-      orderItemsForSend(),
-      notes,
-      cartTotal,
+      items,
+      orderNotes,
+      total,
     );
+
+    clearOrderState();
+    window.location.href = mailtoUrl;
   }
 
   return (
@@ -622,33 +637,30 @@ export default function CatalogView({
             placeholder="הערות (אופציונלי)"
             className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm"
           />
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             <button
               type="button"
               onClick={sendOrderViaWhatsApp}
               disabled={cartItems.length === 0}
-              className={`min-w-0 flex-1 rounded-xl px-3 py-2.5 text-sm font-bold text-white ${
+              className={`w-full rounded-xl px-3 py-3 text-sm font-bold text-white ${
                 cartItems.length > 0 ? "bg-green-600" : "bg-gray-400"
               }`}
             >
-              WhatsApp
+              שלח הזמנה בווצאפ
             </button>
             <button
               type="button"
               onClick={sendOrderViaEmail}
               disabled={cartItems.length === 0}
-              className={`min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-sm font-bold ${
+              className={`w-full rounded-xl border px-3 py-3 text-sm font-bold ${
                 cartItems.length > 0
                   ? "border-emerald-600 text-emerald-800"
                   : "border-gray-300 text-gray-400"
               }`}
             >
-              מייל
+              שלח הזמנה במייל
             </button>
           </div>
-          <p className="text-center text-[11px] text-gray-500">
-            אין WhatsApp? שלח במייל
-          </p>
         </div>
       </footer>
 

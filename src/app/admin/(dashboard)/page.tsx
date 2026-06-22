@@ -16,12 +16,20 @@ interface AdminProduct {
   sku: string;
   rivhitName: string;
   name: string;
+  price: number;
+  rivhitPrice: number;
+  hasCustomPrice?: boolean;
   image: string | null;
   rivhitImage?: string | null;
   hasCustomImage?: boolean;
   categoryId: string | null;
   categoryName: string | null;
   isStaging?: boolean;
+}
+
+function formatAdminPrice(price: number) {
+  if (!price || price <= 0) return "—";
+  return `₪${price.toLocaleString("he-IL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
 const PAGE_SIZE = 48;
@@ -271,6 +279,65 @@ export default function AdminCatalogPage() {
     });
   }
 
+  async function saveProductPrice(itemId: number, priceInput: string) {
+    const trimmed = priceInput.trim();
+    let customPrice: number | null;
+
+    if (!trimmed) {
+      customPrice = null;
+    } else {
+      const parsed = Number.parseFloat(trimmed.replace(",", "."));
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        setError("מחיר לא תקין");
+        return;
+      }
+      customPrice = parsed;
+    }
+
+    setSavingIds((prev) => new Set(prev).add(itemId));
+    setError("");
+
+    const response = await fetch("/api/admin/products", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId, customPrice }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      const product = products.find((p) => p.itemId === itemId);
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.itemId === itemId
+            ? {
+                ...p,
+                price:
+                  customPrice ??
+                  product?.rivhitPrice ??
+                  p.rivhitPrice ??
+                  0,
+                hasCustomPrice: customPrice !== null,
+              }
+            : p,
+        ),
+      );
+      setMessage(
+        customPrice === null
+          ? "המחיר חזר למחיר ריווחית"
+          : "המחיר עודכן בקטלוג",
+      );
+    } else {
+      setError(data.error || "שגיאה בעדכון מחיר");
+    }
+
+    setSavingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
+    });
+  }
+
   async function removeProductImage(itemId: number) {
     if (!confirm("להסיר את התמונה שהועלת? יוצג שוב מה שיש בריווחית (אם יש).")) {
       return;
@@ -499,6 +566,9 @@ export default function AdminCatalogPage() {
                     uploadProductImage(product.itemId, file)
                   }
                   onRemoveImage={() => removeProductImage(product.itemId)}
+                  onSavePrice={(priceInput) =>
+                    saveProductPrice(product.itemId, priceInput)
+                  }
                 />
               ))}
             </div>
@@ -678,6 +748,7 @@ function ProductCard({
   onAssign,
   onUploadImage,
   onRemoveImage,
+  onSavePrice,
 }: {
   product: AdminProduct;
   categories: Category[];
@@ -686,8 +757,16 @@ function ProductCard({
   onAssign: (categoryId: string) => void;
   onUploadImage: (file: File) => void;
   onRemoveImage: () => void;
+  onSavePrice: (priceInput: string) => void;
 }) {
   const fileInputId = `product-image-${product.itemId}`;
+  const [priceInput, setPriceInput] = useState(
+    product.price > 0 ? String(product.price) : "",
+  );
+
+  useEffect(() => {
+    setPriceInput(product.price > 0 ? String(product.price) : "");
+  }, [product.price]);
 
   return (
     <article
@@ -713,6 +792,47 @@ function ProductCard({
         {product.name}
       </h4>
       <p className="mt-1 text-xs text-gray-500">מק&quot;ט: {product.sku}</p>
+
+      <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-2">
+        <p className="text-xs font-medium text-gray-600">מחיר בקטלוג</p>
+        <p className="mt-0.5 text-base font-bold text-emerald-800">
+          {formatAdminPrice(product.price)}
+        </p>
+        {product.hasCustomPrice && product.rivhitPrice !== product.price && (
+          <p className="text-[11px] text-gray-500">
+            ריווחית: {formatAdminPrice(product.rivhitPrice)}
+          </p>
+        )}
+        <div className="mt-2 flex gap-1">
+          <input
+            type="text"
+            inputMode="decimal"
+            value={priceInput}
+            disabled={isSaving}
+            onChange={(e) => setPriceInput(e.target.value)}
+            placeholder="מחיר ₪"
+            className="min-w-0 flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs"
+          />
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => onSavePrice(priceInput)}
+            className="shrink-0 rounded-lg bg-emerald-600 px-2 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+          >
+            שמור
+          </button>
+        </div>
+        {product.hasCustomPrice && (
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => onSavePrice("")}
+            className="mt-1 text-[11px] text-gray-500 underline disabled:opacity-60"
+          >
+            איפוס למחיר ריווחית
+          </button>
+        )}
+      </div>
 
       {product.categoryName && (
         <span

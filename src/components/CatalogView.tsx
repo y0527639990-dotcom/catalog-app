@@ -2,15 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CartItem, CatalogProduct, StoreOrderItem } from "@/lib/types";
-import { buildWhatsAppOrderUrl } from "@/lib/whatsapp";
+import {
+  buildEmailOrderUrl,
+  buildWhatsAppOrderUrl,
+  getOrderEmail,
+  type WhatsAppChannel,
+} from "@/lib/whatsapp";
 
 function buildWhatsAppUrl(
   phone: string,
   storeName: string,
-  items: CartItem[],
+  items: { sku: string; quantity: number; name?: string }[],
   notes: string,
+  total: number,
 ) {
-  return buildWhatsAppOrderUrl(phone, storeName, items, notes);
+  return buildWhatsAppOrderUrl(phone, storeName, items, notes, total);
 }
 
 function compareSku(a: string, b: string) {
@@ -219,10 +225,12 @@ export default function CatalogView({
   storeName,
   initialProducts,
   whatsappNumber,
+  whatsappChannel = "default",
 }: {
   storeName: string;
   initialProducts: CatalogProduct[];
   whatsappNumber: string;
+  whatsappChannel?: WhatsAppChannel;
 }) {
   const SHOW_PRICES_KEY = "catalog_show_prices";
   const [products] = useState(initialProducts);
@@ -375,12 +383,7 @@ export default function CatalogView({
     window.location.href = "/login";
   }
 
-  async function sendOrder() {
-    if (cartItems.length === 0) {
-      alert("העגלה ריקה. הוסף מוצרים לפני שליחה.");
-      return;
-    }
-
+  async function persistOrder() {
     const orderItems: StoreOrderItem[] = cartItems.map((item) => {
       const product = skuToProduct.get(item.sku);
       const unitPrice =
@@ -408,18 +411,59 @@ export default function CatalogView({
         }),
       });
     } catch {
-      // שליחה ל-WhatsApp גם אם השמירה נכשלה
+      // המשך גם אם השמירה נכשלה
+    }
+  }
+
+  function orderItemsForSend() {
+    return cartItems.map((item) => ({
+      sku: item.sku,
+      quantity: item.quantity,
+      name: skuToProduct.get(item.sku)?.name,
+    }));
+  }
+
+  async function sendOrderViaWhatsApp() {
+    if (cartItems.length === 0) {
+      alert("העגלה ריקה. הוסף מוצרים לפני שליחה.");
+      return;
     }
 
+    await persistOrder();
+
     window.open(
-      buildWhatsAppUrl(whatsappNumber, storeName, cartItems, notes),
+      buildWhatsAppUrl(
+        whatsappNumber,
+        storeName,
+        orderItemsForSend(),
+        notes,
+        cartTotal,
+      ),
       "_blank",
       "noopener,noreferrer",
     );
   }
 
+  async function sendOrderViaEmail() {
+    if (cartItems.length === 0) {
+      alert("העגלה ריקה. הוסף מוצרים לפני שליחה.");
+      return;
+    }
+
+    await persistOrder();
+
+    const email = getOrderEmail(whatsappChannel);
+    window.location.href = buildEmailOrderUrl(
+      email,
+      storeName,
+      orderItemsForSend(),
+      notes,
+      cartTotal,
+    );
+  }
+
   return (
-    <div className="mx-auto min-h-screen max-w-lg bg-gray-50 pb-28">
+    <div className="mx-auto min-h-screen max-w-lg bg-gray-50 pb-40">
       <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white shadow-sm">
         <div className="flex items-center gap-2 px-4 py-3">
           <div className="min-w-0 flex-1">
@@ -571,23 +615,40 @@ export default function CatalogView({
       </main>
 
       <footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white p-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-        <div className="mx-auto flex max-w-lg items-center gap-2">
+        <div className="mx-auto max-w-lg space-y-2">
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="הערות (אופציונלי)"
-            className="min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2.5 text-sm"
+            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm"
           />
-          <button
-            type="button"
-            onClick={sendOrder}
-            disabled={cartItems.length === 0}
-            className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold text-white ${
-              cartItems.length > 0 ? "bg-green-600" : "bg-gray-400"
-            }`}
-          >
-            שלח
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={sendOrderViaWhatsApp}
+              disabled={cartItems.length === 0}
+              className={`min-w-0 flex-1 rounded-xl px-3 py-2.5 text-sm font-bold text-white ${
+                cartItems.length > 0 ? "bg-green-600" : "bg-gray-400"
+              }`}
+            >
+              WhatsApp
+            </button>
+            <button
+              type="button"
+              onClick={sendOrderViaEmail}
+              disabled={cartItems.length === 0}
+              className={`min-w-0 flex-1 rounded-xl border px-3 py-2.5 text-sm font-bold ${
+                cartItems.length > 0
+                  ? "border-emerald-600 text-emerald-800"
+                  : "border-gray-300 text-gray-400"
+              }`}
+            >
+              מייל
+            </button>
+          </div>
+          <p className="text-center text-[11px] text-gray-500">
+            אין WhatsApp? שלח במייל
+          </p>
         </div>
       </footer>
 

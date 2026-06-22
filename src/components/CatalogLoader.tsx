@@ -28,6 +28,7 @@ export default function CatalogLoader({
         storeName={storeName}
         initialProducts={initialProducts}
         whatsappNumber={getWhatsAppNumber(whatsappChannel)}
+        whatsappChannel={whatsappChannel}
       />
     </>
   );

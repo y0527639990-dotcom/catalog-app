@@ -100,6 +100,7 @@ export async function GET(request: Request) {
         rivhitImage: resolveImageUrl(item.picture_link),
         image: resolveProductImage(item.picture_link, override),
         hasCustomImage: Boolean(override?.custom_image),
+        hasCustomPrice: override?.custom_price != null,
         isHidden: override?.is_hidden ?? false,
         categoryId: mapping?.category_id ?? null,
         categoryName: category?.name ?? null,

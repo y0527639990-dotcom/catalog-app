@@ -118,9 +118,9 @@ export default function CustomerLinkCard() {
         <div className="mt-4 space-y-3">
           {data.publicLink ? (
             <LinkRow
-              label="קישור לאינטרנט (לשליחה ללקוחות)"
+              label="קישור ראשי (איתן)"
               url={data.publicLink}
-              hint="הזמנות נשלחות למספר WhatsApp הראשי"
+              hint="הזמנות במייל: ykavanatalev@gmail.com · בווצאפ: 055-566-2240"
             />
           ) : (
             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -136,9 +136,9 @@ export default function CustomerLinkCard() {
 
           {data.publicLinkB && (
             <LinkRow
-              label="קישור B — WhatsApp שני"
+              label="קישור B"
               url={data.publicLinkB}
-              hint="אותו קטלוג, הזמנות נשלחות למספר WhatsApp אחר"
+              hint="הזמנות במייל: p27188812@gmail.com · בווצאפ: 052-718-8812"
             />
           )}
 
@@ -163,7 +163,7 @@ export default function CustomerLinkCard() {
           {primaryLink && (
             <p className="text-xs text-gray-500">
               הלקוח נכנס → מזין שם חנות + סיסמה → רואה קטגוריות → בוחר מוצרים →
-              שולח ב-WhatsApp.
+              שולח בווצאפ או במייל.
             </p>
           )}
         </div>

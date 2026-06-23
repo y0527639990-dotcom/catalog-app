@@ -11,7 +11,6 @@ export default function StoreLoginForm({
   channel?: WhatsAppChannel;
 }) {
   const [storeName, setStoreName] = useState("");
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,12 +19,8 @@ export default function StoreLoginForm({
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved) as {
-          storeName?: string;
-          username?: string;
-        };
+        const parsed = JSON.parse(saved) as { storeName?: string };
         if (parsed.storeName) setStoreName(parsed.storeName);
-        if (parsed.username) setUsername(parsed.username);
       }
     } catch {
       // ignore
@@ -41,7 +36,7 @@ export default function StoreLoginForm({
       const response = await fetch("/api/auth/store/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeName, username, password, channel }),
+        body: JSON.stringify({ storeName, password, channel }),
       });
 
       const data = await response.json();
@@ -52,10 +47,7 @@ export default function StoreLoginForm({
 
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({
-          storeName: storeName.trim(),
-          username: username.trim(),
-        }),
+        JSON.stringify({ storeName: storeName.trim() }),
       );
 
       for (let i = sessionStorage.length - 1; i >= 0; i--) {
@@ -79,9 +71,9 @@ export default function StoreLoginForm({
         כניסה לקטלוג
       </h1>
       <p className="mb-6 text-center text-sm text-gray-600">
-        פעם ראשונה? הזינו פרטים ובחרו סיסמה — ונכנסים ישר.
+        פעם ראשונה? הזינו שם חנות ובחרו סיסמה — ונכנסים ישר.
         <br />
-        חוזרים? אותם פרטים + הסיסמה שבחרתם.
+        חוזרים? אותו שם חנות + הסיסמה שבחרתם.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
@@ -95,20 +87,6 @@ export default function StoreLoginForm({
             autoComplete="organization"
             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base"
             placeholder="למשל: מינימרק השכונה"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">שם משתמש</label>
-          <input
-            type="text"
-            name="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base"
-            placeholder="למשל: דוד"
             required
           />
         </div>
@@ -143,7 +121,7 @@ export default function StoreLoginForm({
       </form>
 
       <p className="mt-4 text-center text-xs text-gray-500">
-        המכשיר יזכור שם חנות ומשתמש לפעם הבאה.
+        המכשיר יזכור את שם החנות לפעם הבאה.
       </p>
     </div>
   );

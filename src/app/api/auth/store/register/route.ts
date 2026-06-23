@@ -4,11 +4,11 @@ import { hashPassword, setSession } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
-    const { storeName, username, password } = await request.json();
+    const { storeName, password } = await request.json();
 
-    if (!storeName?.trim() || !username?.trim() || !password?.trim()) {
+    if (!storeName?.trim() || !password?.trim()) {
       return NextResponse.json(
-        { error: "יש למלא שם חנות, שם משתמש וסיסמה" },
+        { error: "יש למלא שם חנות וסיסמה" },
         { status: 400 },
       );
     }
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       .from("stores")
       .insert({
         store_name: storeName.trim(),
-        username: username.trim(),
+        username: "ראשי",
         password_hash: passwordHash,
       })
       .select("id, store_name, username")
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     if (error) {
       if (error.code === "23505") {
         return NextResponse.json(
-          { error: "שם החנות ושם המשתמש כבר קיימים. נסה להתחבר." },
+          { error: "שם החנות כבר קיים. נסה להתחבר." },
           { status: 409 },
         );
       }

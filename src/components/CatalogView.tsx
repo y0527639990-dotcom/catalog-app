@@ -54,9 +54,11 @@ function formatPrice(price: number) {
 function QuantityStepper({
   value,
   onChange,
+  compact = false,
 }: {
   value: number;
   onChange: (value: number) => void;
+  compact?: boolean;
 }) {
   const [draft, setDraft] = useState(String(value));
   const [focused, setFocused] = useState(false);
@@ -75,11 +77,15 @@ function QuantityStepper({
   }
 
   return (
-    <div className="flex items-center rounded-lg border border-gray-300 bg-white">
+    <div
+      className={`flex items-center rounded-lg border border-gray-300 bg-white ${
+        compact ? "text-xs" : ""
+      }`}
+    >
       <button
         type="button"
         onClick={() => onChange(Math.max(1, value - 1))}
-        className="px-2 py-2 text-lg font-bold text-gray-700"
+        className={`font-bold text-gray-700 ${compact ? "px-1.5 py-1 text-sm" : "px-2 py-2 text-lg"}`}
         aria-label="הפחת כמות"
       >
         −
@@ -106,13 +112,15 @@ function QuantityStepper({
             e.currentTarget.blur();
           }
         }}
-        className="w-14 border-0 bg-emerald-50 py-2 text-center text-base font-bold text-gray-900 outline-none ring-emerald-400 focus:bg-emerald-100 focus:ring-2"
+        className={`border-0 bg-emerald-50 text-center font-bold text-gray-900 outline-none ring-emerald-400 focus:bg-emerald-100 focus:ring-2 ${
+          compact ? "w-8 py-1 text-xs" : "w-14 py-2 text-base"
+        }`}
         aria-label="כמות — הקלד מספר"
       />
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="px-2 py-2 text-lg font-bold text-gray-700"
+        className={`font-bold text-gray-700 ${compact ? "px-1.5 py-1 text-sm" : "px-2 py-2 text-lg"}`}
         aria-label="הוסף כמות"
       >
         +
@@ -149,15 +157,15 @@ function ProductGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
       {products.map((product) => {
         const inCart = (cart[product.sku] ?? 0) > 0;
         return (
           <article
             key={product.itemId}
-            className={`flex flex-col rounded-2xl p-3 shadow-sm transition ${
+            className={`flex flex-col rounded-xl p-2 shadow-sm transition ${
               inCart
-                ? "border-2 border-emerald-600 bg-emerald-100"
+                ? "border-2 border-emerald-600 bg-emerald-50"
                 : "border border-gray-200 bg-white"
             }`}
           >
@@ -165,7 +173,7 @@ function ProductGrid({
               <button
                 type="button"
                 onClick={() => onImageClick(product.image!, product.name)}
-                className="mb-2 overflow-hidden rounded-xl"
+                className="mb-1.5 overflow-hidden rounded-lg"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -173,32 +181,33 @@ function ProductGrid({
                   alt={product.name}
                   loading="lazy"
                   decoding="async"
-                  className="aspect-square w-full object-cover"
+                  className="h-20 w-full object-cover sm:h-24"
                 />
               </button>
             ) : (
-              <div className="mb-2 flex aspect-square w-full items-center justify-center rounded-xl bg-gray-100 text-xs text-gray-500">
+              <div className="mb-1.5 flex h-20 w-full items-center justify-center rounded-lg bg-gray-100 text-[10px] text-gray-500 sm:h-24">
                 אין תמונה
               </div>
             )}
 
-            <h3 className="line-clamp-2 text-sm font-semibold text-gray-900">
+            <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-gray-900">
               {product.name}
             </h3>
-            <p className="mt-1 text-xs text-gray-500">מק&quot;ט: {product.sku}</p>
+            <p className="mt-0.5 text-[10px] text-gray-500">מק&quot;ט: {product.sku}</p>
             {showPrices && formatPrice(product.price) && (
-              <p className="mt-1 text-sm font-bold text-emerald-800">
+              <p className="mt-0.5 text-xs font-bold text-emerald-800">
                 {formatPrice(product.price)}
               </p>
             )}
             {inCart && (
-              <p className="mt-1 text-xs font-medium text-emerald-800">
+              <p className="mt-0.5 text-[10px] font-medium text-emerald-800">
                 בעגלה: {cart[product.sku]}
               </p>
             )}
 
-            <div className="mt-auto flex items-center gap-2 pt-3">
+            <div className="mt-auto flex flex-col gap-1.5 pt-2">
               <QuantityStepper
+                compact
                 value={quantities[product.itemId] ?? 1}
                 onChange={(value) =>
                   setQuantities((prev) => ({
@@ -209,7 +218,7 @@ function ProductGrid({
               />
               <button
                 onClick={() => onAddToCart(product)}
-                className="flex-1 rounded-xl bg-emerald-600 py-2 text-xs font-semibold text-white"
+                className="w-full rounded-lg bg-emerald-600 py-1.5 text-[11px] font-semibold text-white"
               >
                 הוסף
               </button>
@@ -478,9 +487,9 @@ export default function CatalogView({
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg bg-gray-50 pb-40">
+    <div className="mx-auto min-h-screen w-full max-w-5xl bg-gray-50 pb-28">
       <header className="sticky top-0 z-20 border-b border-emerald-100 bg-white shadow-sm">
-        <div className="flex items-center gap-2 px-4 py-3">
+        <div className="flex items-center gap-2 px-3 py-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs text-gray-500">שלום,</p>
             <h1 className="truncate text-base font-bold text-emerald-800">
@@ -521,7 +530,7 @@ export default function CatalogView({
           <button
             type="button"
             onClick={goToCategories}
-            className="flex w-full items-center justify-center gap-2 border-t border-emerald-200 bg-emerald-600 px-4 py-3.5 text-base font-bold text-white active:bg-emerald-700"
+            className="flex w-full items-center justify-center gap-2 border-t border-emerald-200 bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white active:bg-emerald-700"
           >
             <span aria-hidden="true">→</span>
             חזרה לקטגוריות
@@ -529,8 +538,8 @@ export default function CatalogView({
         )}
 
         {onCategoryPage && categories.length > 1 && (
-          <div className="border-t border-gray-100 bg-gray-50 px-4 py-2">
-            <div className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="border-t border-gray-100 bg-gray-50 px-3 py-1.5">
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {categories.map((category) => (
                 <button
                   key={category.id}
@@ -539,7 +548,7 @@ export default function CatalogView({
                     setSelectedCategoryId(category.id);
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
                     category.id === selectedCategoryId
                       ? "bg-emerald-600 text-white shadow-sm"
                       : "border border-gray-200 bg-white text-gray-700"
@@ -553,15 +562,15 @@ export default function CatalogView({
         )}
 
         {categories.length > 0 && (
-          <div className="space-y-2 px-4 pb-3 pt-2">
+          <div className="space-y-1.5 px-3 pb-2 pt-1.5">
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="חיפוש לפי שם או מק״ט..."
-              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-sm"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
             />
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-xs text-gray-700">
               <input
                 type="checkbox"
                 checked={showPrices}
@@ -574,7 +583,7 @@ export default function CatalogView({
         )}
       </header>
 
-      <main className="scroll-smooth px-4 py-4">
+      <main className="scroll-smooth px-2 py-2 sm:px-3">
         {categories.length === 0 ? (
           <div className="rounded-2xl bg-white p-6 text-center text-gray-600 shadow">
             <p className="font-medium">הקטלוג עדיין ריק</p>
@@ -629,36 +638,36 @@ export default function CatalogView({
         )}
       </main>
 
-      <footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white p-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
-        <div className="mx-auto max-w-lg space-y-2">
+      <footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white p-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+        <div className="mx-auto max-w-5xl space-y-1.5">
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="הערות (אופציונלי)"
-            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={sendOrderViaWhatsApp}
               disabled={cartItems.length === 0}
-              className={`w-full rounded-xl px-3 py-3 text-sm font-bold text-white ${
+              className={`rounded-lg px-2 py-2.5 text-xs font-bold text-white sm:text-sm ${
                 cartItems.length > 0 ? "bg-green-600" : "bg-gray-400"
               }`}
             >
-              שלח הזמנה בווצאפ
+              שלח בווצאפ
             </button>
             <button
               type="button"
               onClick={sendOrderViaEmail}
               disabled={cartItems.length === 0}
-              className={`w-full rounded-xl border px-3 py-3 text-sm font-bold ${
+              className={`rounded-lg border px-2 py-2.5 text-xs font-bold sm:text-sm ${
                 cartItems.length > 0
                   ? "border-emerald-600 text-emerald-800"
                   : "border-gray-300 text-gray-400"
               }`}
             >
-              שלח הזמנה במייל
+              שלח במייל
             </button>
           </div>
         </div>

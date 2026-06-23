@@ -4,13 +4,33 @@ import { hashPassword, setSession, verifyPassword } from "@/lib/auth";
 import { insertStore, trackStoreLogin } from "@/lib/store-channels";
 import type { WhatsAppChannel } from "@/lib/types";
 
+const DEFAULT_USERNAME = "ראשי";
+
+type StoreRow = {
+  id: string;
+  store_name: string;
+  username: string;
+  password_hash: string;
+};
+
+async function findStoreByNameAndPassword(
+  stores: StoreRow[],
+  password: string,
+): Promise<StoreRow | null> {
+  for (const store of stores) {
+    const valid = await verifyPassword(password, store.password_hash);
+    if (valid) return store;
+  }
+  return null;
+}
+
 export async function POST(request: Request) {
   try {
-    const { storeName, username, password, channel } = await request.json();
+    const { storeName, password, channel } = await request.json();
 
-    if (!storeName?.trim() || !username?.trim() || !password?.trim()) {
+    if (!storeName?.trim() || !password?.trim()) {
       return NextResponse.json(
-        { error: "יש למלא שם חנות, שם משתמש וסיסמה" },
+        { error: "יש למלא שם חנות וסיסמה" },
         { status: 400 },
       );
     }
@@ -24,34 +44,33 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
     const trimmedStore = storeName.trim();
-    const trimmedUser = username.trim();
     const trimmedPassword = password.trim();
     const channelValue: WhatsAppChannel = channel === "b" ? "b" : "default";
 
-    const { data: existing, error: lookupError } = await supabase
+    const { data: existingStores, error: lookupError } = await supabase
       .from("stores")
       .select("id, store_name, username, password_hash")
-      .eq("store_name", trimmedStore)
-      .eq("username", trimmedUser)
-      .maybeSingle();
+      .eq("store_name", trimmedStore);
 
     if (lookupError) {
       return NextResponse.json({ error: lookupError.message }, { status: 500 });
     }
 
-    let store = existing;
+    const stores = existingStores ?? [];
+    let store: StoreRow | null = null;
+    const isNew = stores.length === 0;
 
-    if (!store) {
+    if (isNew) {
       const { data: created, error: createError } = await insertStore(supabase, {
-          store_name: trimmedStore,
-          username: trimmedUser,
-          password_hash: await hashPassword(trimmedPassword),
-        });
+        store_name: trimmedStore,
+        username: DEFAULT_USERNAME,
+        password_hash: await hashPassword(trimmedPassword),
+      });
 
       if (createError) {
         if (createError.code === "23505") {
           return NextResponse.json(
-            { error: "שם החנות והמשתמש כבר קיימים — הזן את הסיסמה הנכונה" },
+            { error: "שם החנות כבר קיים — הזן את הסיסמה הנכונה" },
             { status: 409 },
           );
         }
@@ -59,14 +78,21 @@ export async function POST(request: Request) {
       }
 
       store = created;
-    } else {
-      const valid = await verifyPassword(trimmedPassword, store.password_hash);
+    } else if (stores.length === 1) {
+      const candidate = stores[0];
+      const valid = await verifyPassword(trimmedPassword, candidate.password_hash);
       if (!valid) {
+        return NextResponse.json({ error: "סיסמה שגויה" }, { status: 401 });
+      }
+      store = candidate;
+    } else {
+      store = await findStoreByNameAndPassword(stores, trimmedPassword);
+      if (!store) {
         return NextResponse.json({ error: "סיסמה שגויה" }, { status: 401 });
       }
     }
 
-    await trackStoreLogin(supabase, store.id, channelValue, !existing);
+    await trackStoreLogin(supabase, store.id, channelValue, isNew);
 
     await setSession({
       role: "store",
@@ -80,7 +106,7 @@ export async function POST(request: Request) {
       success: true,
       storeName: store.store_name,
       username: store.username,
-      isNew: !existing,
+      isNew,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "שגיאה בכניסה";

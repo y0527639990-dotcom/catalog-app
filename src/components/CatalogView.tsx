@@ -8,6 +8,7 @@ import {
   getOrderEmail,
   type WhatsAppChannel,
 } from "@/lib/whatsapp";
+import DeveloperFooter from "@/components/DeveloperFooter";
 
 function buildWhatsAppUrl(
   phone: string,
@@ -235,11 +236,13 @@ export default function CatalogView({
   initialProducts,
   whatsappNumber,
   whatsappChannel = "default",
+  locale = "he",
 }: {
   storeName: string;
   initialProducts: CatalogProduct[];
   whatsappNumber: string;
   whatsappChannel?: WhatsAppChannel;
+  locale?: "he" | "en";
 }) {
   const SHOW_PRICES_KEY = "catalog_show_prices";
   const [products] = useState(initialProducts);
@@ -637,6 +640,8 @@ export default function CatalogView({
           </div>
         )}
       </main>
+
+      <DeveloperFooter locale={locale} />
 
       <footer className="fixed bottom-0 left-0 right-0 z-20 border-t border-gray-200 bg-white p-2 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
         <div className="mx-auto max-w-5xl space-y-1.5">

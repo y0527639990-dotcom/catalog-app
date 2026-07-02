@@ -29,6 +29,7 @@ export default function CatalogLoader({
         initialProducts={initialProducts}
         whatsappNumber={getWhatsAppNumber(whatsappChannel)}
         whatsappChannel={whatsappChannel}
+        locale="he"
       />
     </>
   );

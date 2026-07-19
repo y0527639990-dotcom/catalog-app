@@ -59,7 +59,7 @@ export async function syncNewItemsToStagingCategory(
 
   const { error } = await supabase
     .from("product_mappings")
-    .upsert(rows, { onConflict: "rivhit_item_id" });
+    .upsert(rows, { onConflict: "rivhit_item_id,category_id" });
 
   if (error) {
     throw new Error(error.message);

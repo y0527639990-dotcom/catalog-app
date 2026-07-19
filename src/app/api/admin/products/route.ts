@@ -76,19 +76,22 @@ export async function GET(request: Request) {
     const overrides = new Map(
       overridesData.map((row) => [row.rivhit_item_id, row]),
     );
-    const mappingsMap = new Map(
-      mappings.map((row) => [row.rivhit_item_id, row]),
-    );
+    const mappingsMap = new Map<number, ProductMappingRow[]>();
+    for (const mapping of mappings) {
+      const itemMappings = mappingsMap.get(mapping.rivhit_item_id) ?? [];
+      itemMappings.push(mapping);
+      mappingsMap.set(mapping.rivhit_item_id, itemMappings);
+    }
     const categories = new Map(
       (categoriesResult.data ?? []).map((row) => [row.id, row]),
     );
 
     const products = items.map((item) => {
       const override = overrides.get(item.item_id);
-      const mapping = mappingsMap.get(item.item_id);
-      const category = mapping?.category_id
-        ? categories.get(mapping.category_id)
-        : null;
+      const itemMappings = mappingsMap.get(item.item_id) ?? [];
+      const itemCategories = itemMappings
+        .map((mapping) => categories.get(mapping.category_id))
+        .filter((category) => category != null);
 
       return {
         itemId: item.item_id,
@@ -102,9 +105,9 @@ export async function GET(request: Request) {
         hasCustomImage: Boolean(override?.custom_image),
         hasCustomPrice: override?.custom_price != null,
         isHidden: override?.is_hidden ?? false,
-        categoryId: mapping?.category_id ?? null,
-        categoryName: category?.name ?? null,
-        isStaging: category?.is_staging === true,
+        categoryIds: itemCategories.map((category) => category.id),
+        categoryNames: itemCategories.map((category) => category.name),
+        isStaging: itemCategories.some((category) => category.is_staging === true),
       };
     });
 
@@ -132,6 +135,7 @@ export async function PUT(request: Request) {
     const {
       itemId,
       categoryId,
+      categoryIds,
       customName,
       customPrice,
       customImage,
@@ -145,37 +149,94 @@ export async function PUT(request: Request) {
 
     const supabase = createAdminClient();
 
-    if (categoryId !== undefined) {
-      if (categoryId) {
-        const { data: category } = await supabase
-          .from("categories")
-          .select("id, is_staging")
-          .eq("id", categoryId)
-          .maybeSingle();
+    const requestedCategoryIds =
+      categoryIds !== undefined
+        ? categoryIds
+        : categoryId !== undefined
+          ? categoryId
+            ? [categoryId]
+            : []
+          : undefined;
 
-        if (!category) {
+    if (requestedCategoryIds !== undefined) {
+      if (
+        !Array.isArray(requestedCategoryIds) ||
+        requestedCategoryIds.some((id) => typeof id !== "string")
+      ) {
+        return NextResponse.json(
+          { error: "רשימת הקטגוריות אינה תקינה" },
+          { status: 400 },
+        );
+      }
+
+      const uniqueCategoryIds = [...new Set<string>(requestedCategoryIds)];
+      let targetCategoryIds: string[];
+
+      if (uniqueCategoryIds.length > 0) {
+        const { data: selectedCategories, error: categoriesError } =
+          await supabase
+            .from("categories")
+            .select("id, is_staging")
+            .in("id", uniqueCategoryIds);
+
+        if (categoriesError) {
+          throw new Error(categoriesError.message);
+        }
+
+        if (
+          !selectedCategories ||
+          selectedCategories.length !== uniqueCategoryIds.length ||
+          selectedCategories.some((category) => category.is_staging)
+        ) {
           return NextResponse.json(
-            { error: "קטגוריה לא נמצאה" },
+            { error: "אחת הקטגוריות לא נמצאה" },
             { status: 400 },
           );
         }
 
-        await supabase.from("product_mappings").upsert(
-          {
-            rivhit_item_id: itemId,
-            category_id: categoryId,
-          },
-          { onConflict: "rivhit_item_id" },
-        );
+        targetCategoryIds = uniqueCategoryIds;
       } else {
         const staging = await ensureStagingCategory(supabase);
-        await supabase.from("product_mappings").upsert(
-          {
+        targetCategoryIds = [staging.id];
+      }
+
+      const { data: existingMappings, error: mappingsError } = await supabase
+        .from("product_mappings")
+        .select("category_id")
+        .eq("rivhit_item_id", itemId);
+
+      if (mappingsError) {
+        throw new Error(mappingsError.message);
+      }
+
+      const { error: upsertError } = await supabase
+        .from("product_mappings")
+        .upsert(
+          targetCategoryIds.map((selectedCategoryId) => ({
             rivhit_item_id: itemId,
-            category_id: staging.id,
-          },
-          { onConflict: "rivhit_item_id" },
+            category_id: selectedCategoryId,
+          })),
+          { onConflict: "rivhit_item_id,category_id" },
         );
+
+      if (upsertError) {
+        throw new Error(upsertError.message);
+      }
+
+      const obsoleteCategoryIds = (existingMappings ?? [])
+        .map((mapping) => mapping.category_id as string)
+        .filter((id) => !targetCategoryIds.includes(id));
+
+      if (obsoleteCategoryIds.length > 0) {
+        const { error: deleteError } = await supabase
+          .from("product_mappings")
+          .delete()
+          .eq("rivhit_item_id", itemId)
+          .in("category_id", obsoleteCategoryIds);
+
+        if (deleteError) {
+          throw new Error(deleteError.message);
+        }
       }
     }
 

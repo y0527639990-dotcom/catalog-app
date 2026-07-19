@@ -328,12 +328,21 @@ export default function AgentOrderView({
 
   const categoryProducts =
     categories.find((c) => c.id === selectedCategoryId)?.products ?? [];
-  const searchResults = products.filter(
-    (p) =>
-      search.trim() &&
-      (p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase())),
-  );
+  const searchResults = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return [];
+
+    const uniqueProducts = new Map<number, CatalogProduct>();
+    for (const product of products) {
+      if (
+        product.name.toLowerCase().includes(term) ||
+        product.sku.toLowerCase().includes(term)
+      ) {
+        uniqueProducts.set(product.itemId, product);
+      }
+    }
+    return Array.from(uniqueProducts.values());
+  }, [products, search]);
   const onCategoryPage = selectedCategoryId !== null;
   const isSearching = search.trim().length > 0;
 

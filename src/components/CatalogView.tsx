@@ -315,9 +315,15 @@ export default function CatalogView({
 
   const searchResults = useMemo(() => {
     if (!isSearching) return [];
-    return products
-      .filter((p) => matchesSearch(p, search))
-      .sort((a, b) => compareSku(a.sku, b.sku));
+    const uniqueProducts = new Map<number, CatalogProduct>();
+    for (const product of products) {
+      if (matchesSearch(product, search)) {
+        uniqueProducts.set(product.itemId, product);
+      }
+    }
+    return Array.from(uniqueProducts.values()).sort((a, b) =>
+      compareSku(a.sku, b.sku),
+    );
   }, [products, search, isSearching]);
 
   const categoryProducts = useMemo(() => {

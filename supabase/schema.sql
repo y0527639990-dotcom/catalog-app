@@ -30,7 +30,7 @@ create table if not exists product_mappings (
   rivhit_item_id int not null,
   category_id uuid not null references categories(id) on delete cascade,
   sort_order int not null default 0,
-  unique (rivhit_item_id)
+  unique (rivhit_item_id, category_id)
 );
 
 -- עריכות מנהל על מוצרים מ-Rivhit

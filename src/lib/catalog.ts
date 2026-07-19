@@ -59,13 +59,15 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
   ]);
 
   const categoryMap = new Map(categories.map((c) => [c.id, c]));
-  const mappingByItem = new Map<
+  const mappingsByItem = new Map<
     number,
-    { category_id: string; sort_order: number }
+    { category_id: string; sort_order: number }[]
   >();
 
   for (const mapping of mappings) {
-    mappingByItem.set(mapping.rivhit_item_id, mapping);
+    const itemMappings = mappingsByItem.get(mapping.rivhit_item_id) ?? [];
+    itemMappings.push(mapping);
+    mappingsByItem.set(mapping.rivhit_item_id, itemMappings);
   }
 
   const products: CatalogProduct[] = [];
@@ -74,25 +76,24 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
     const override = overrides.get(item.item_id);
     if (override?.is_hidden) continue;
 
-    const mapping = mappingByItem.get(item.item_id);
-    if (!mapping) continue;
-
-    const category = categoryMap.get(mapping.category_id);
-    if (!category) continue;
-
     const sku = getSku(item);
     if (!sku) continue;
 
-    products.push({
-      itemId: item.item_id,
-      sku,
-      name: override?.custom_name || item.item_name,
-      price: override?.custom_price ?? item.sale_nis,
-      image: resolveProductImage(item.picture_link, override),
-      categoryId: category.id,
-      categoryName: category.name,
-      categorySortOrder: category.sort_order,
-    });
+    for (const mapping of mappingsByItem.get(item.item_id) ?? []) {
+      const category = categoryMap.get(mapping.category_id);
+      if (!category) continue;
+
+      products.push({
+        itemId: item.item_id,
+        sku,
+        name: override?.custom_name || item.item_name,
+        price: override?.custom_price ?? item.sale_nis,
+        image: resolveProductImage(item.picture_link, override),
+        categoryId: category.id,
+        categoryName: category.name,
+        categorySortOrder: category.sort_order,
+      });
+    }
   }
 
   products.sort((a, b) => {
@@ -107,7 +108,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
 
 export const getCachedCatalogProducts = unstable_cache(
   async () => getCatalogProducts(),
-  ["catalog-products-v3"],
+  ["catalog-products-v4"],
   { revalidate: 300, tags: [CATALOG_CACHE_TAG] },
 );
 

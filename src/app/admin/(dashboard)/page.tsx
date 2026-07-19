@@ -22,8 +22,8 @@ interface AdminProduct {
   image: string | null;
   rivhitImage?: string | null;
   hasCustomImage?: boolean;
-  categoryId: string | null;
-  categoryName: string | null;
+  categoryIds: string[];
+  categoryNames: string[];
   isStaging?: boolean;
 }
 
@@ -168,7 +168,16 @@ export default function AdminCatalogPage() {
     );
     setProducts((prev) =>
       prev.map((p) =>
-        p.categoryId === id ? { ...p, categoryName: data.category.name } : p,
+        p.categoryIds.includes(id)
+          ? {
+              ...p,
+              categoryNames: p.categoryIds.map((categoryId, index) =>
+                categoryId === id
+                  ? data.category.name
+                  : p.categoryNames[index],
+              ),
+            }
+          : p,
       ),
     );
     setMessage(`שם הקטגוריה עודכן ל: "${data.category.name}"`);
@@ -192,7 +201,7 @@ export default function AdminCatalogPage() {
     setMessage("סדר הקטגוריות עודכן");
   }
 
-  async function saveCategory(itemId: number, categoryId: string) {
+  async function saveCategories(itemId: number, categoryIds: string[]) {
     setSavingIds((prev) => new Set(prev).add(itemId));
     setError("");
 
@@ -201,23 +210,33 @@ export default function AdminCatalogPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         itemId,
-        categoryId: categoryId || null,
+        categoryIds,
       }),
     });
 
     const data = await response.json();
 
     if (response.ok) {
-      const category = categories.find((c) => c.id === categoryId);
+      const selectedCategories = categories.filter((category) =>
+        categoryIds.includes(category.id),
+      );
 
       setProducts((prev) =>
         prev.map((product) =>
           product.itemId === itemId
             ? {
                 ...product,
-                categoryId: categoryId || stagingCategoryId,
-                categoryName: category?.name ?? STAGING_CATEGORY_NAME,
-                isStaging: category?.is_staging ?? !categoryId,
+                categoryIds:
+                  selectedCategories.length > 0
+                    ? selectedCategories.map((category) => category.id)
+                    : stagingCategoryId
+                      ? [stagingCategoryId]
+                      : [],
+                categoryNames:
+                  selectedCategories.length > 0
+                    ? selectedCategories.map((category) => category.name)
+                    : [STAGING_CATEGORY_NAME],
+                isStaging: selectedCategories.length === 0,
               }
             : product,
         ),
@@ -225,8 +244,8 @@ export default function AdminCatalogPage() {
 
       const product = products.find((p) => p.itemId === itemId);
       setMessage(
-        categoryId && categoryId !== stagingCategoryId
-          ? `שויך לקטגוריה: ${product?.name}`
+        selectedCategories.length > 0
+          ? `הקטגוריות של ${product?.name} עודכנו`
           : `הועבר ל"${STAGING_CATEGORY_NAME}": ${product?.name}`,
       );
     } else {
@@ -380,7 +399,8 @@ export default function AdminCatalogPage() {
         product.sku.toLowerCase().includes(term);
 
       const matchesCategory =
-        categoryFilter === "all" || product.categoryId === categoryFilter;
+        categoryFilter === "all" ||
+        product.categoryIds.includes(categoryFilter);
 
       return matchesSearch && matchesCategory;
     });
@@ -393,10 +413,12 @@ export default function AdminCatalogPage() {
   );
 
   const stagingCount = products.filter(
-    (p) => p.categoryId === stagingCategoryId || p.isStaging,
+    (p) =>
+      (stagingCategoryId && p.categoryIds.includes(stagingCategoryId)) ||
+      p.isStaging,
   ).length;
   const liveCount = products.filter(
-    (p) => p.categoryId && p.categoryId !== stagingCategoryId,
+    (p) => p.categoryIds.some((id) => id !== stagingCategoryId),
   ).length;
 
   return (
@@ -466,7 +488,7 @@ export default function AdminCatalogPage() {
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
           <p className="font-semibold text-emerald-900">
-            שיוך מהיר — בחר קטגוריה ולחץ &quot;שייך&quot; על המוצר
+            שיוך מהיר — בחר קטגוריה ולחץ &quot;הוסף לקטגוריה&quot; על המוצר
           </p>
           <select
             value={assignCategoryId}
@@ -474,11 +496,13 @@ export default function AdminCatalogPage() {
             className="mt-3 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 sm:max-w-sm"
           >
             <option value="">בחר קטגוריה לשיוך...</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
+            {categories
+              .filter((category) => !category.is_staging)
+              .map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
           </select>
         </div>
 
@@ -514,7 +538,7 @@ export default function AdminCatalogPage() {
             .filter((c) => !c.is_staging)
             .map((category) => {
             const count = products.filter(
-              (p) => p.categoryId === category.id,
+              (p) => p.categoryIds.includes(category.id),
             ).length;
             return (
               <FilterPill
@@ -559,8 +583,8 @@ export default function AdminCatalogPage() {
                   categories={categories.filter((c) => !c.is_staging)}
                   assignCategoryId={assignCategoryId}
                   isSaving={savingIds.has(product.itemId)}
-                  onAssign={(categoryId) =>
-                    saveCategory(product.itemId, categoryId)
+                  onCategoriesChange={(categoryIds) =>
+                    saveCategories(product.itemId, categoryIds)
                   }
                   onUploadImage={(file) =>
                     uploadProductImage(product.itemId, file)
@@ -745,7 +769,7 @@ function ProductCard({
   categories,
   assignCategoryId,
   isSaving,
-  onAssign,
+  onCategoriesChange,
   onUploadImage,
   onRemoveImage,
   onSavePrice,
@@ -754,7 +778,7 @@ function ProductCard({
   categories: Category[];
   assignCategoryId: string;
   isSaving: boolean;
-  onAssign: (categoryId: string) => void;
+  onCategoriesChange: (categoryIds: string[]) => void;
   onUploadImage: (file: File) => void;
   onRemoveImage: () => void;
   onSavePrice: (priceInput: string) => void;
@@ -768,11 +792,15 @@ function ProductCard({
     setPriceInput(product.price > 0 ? String(product.price) : "");
   }, [product.price]);
 
+  const liveCategoryIds = product.categoryIds.filter((categoryId) =>
+    categories.some((category) => category.id === categoryId),
+  );
+
   return (
     <article
       className={`flex flex-col rounded-2xl border bg-white p-3 shadow-sm ${
         isSaving ? "opacity-60" : ""
-      } ${product.categoryId ? "border-emerald-200" : "border-gray-200"}`}
+      } ${product.categoryIds.length > 0 ? "border-emerald-200" : "border-gray-200"}`}
     >
       {product.image ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -834,16 +862,21 @@ function ProductCard({
         )}
       </div>
 
-      {product.categoryName && (
-        <span
-          className={`mt-2 inline-block rounded-full px-2 py-1 text-xs ${
-            product.isStaging
-              ? "bg-amber-50 text-amber-900"
-              : "bg-emerald-50 text-emerald-800"
-          }`}
-        >
-          {product.categoryName}
-        </span>
+      {product.categoryNames.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {product.categoryNames.map((categoryName, index) => (
+            <span
+              key={product.categoryIds[index] ?? `${categoryName}-${index}`}
+              className={`inline-block rounded-full px-2 py-1 text-xs ${
+                product.isStaging
+                  ? "bg-amber-50 text-amber-900"
+                  : "bg-emerald-50 text-emerald-800"
+              }`}
+            >
+              {categoryName}
+            </span>
+          ))}
+        </div>
       )}
 
       <div className="mt-auto space-y-2 pt-3">
@@ -882,27 +915,62 @@ function ProductCard({
         {assignCategoryId && (
           <button
             type="button"
-            disabled={isSaving}
-            onClick={() => onAssign(assignCategoryId)}
+            disabled={
+              isSaving || liveCategoryIds.includes(assignCategoryId)
+            }
+            onClick={() =>
+              onCategoriesChange([
+                ...new Set([...liveCategoryIds, assignCategoryId]),
+              ])
+            }
             className="w-full rounded-xl bg-emerald-600 py-2 text-xs font-semibold text-white disabled:opacity-60"
           >
-            {isSaving ? "שומר..." : "שייך לקטגוריה"}
+            {isSaving
+              ? "שומר..."
+              : liveCategoryIds.includes(assignCategoryId)
+                ? "כבר משויך לקטגוריה"
+                : "הוסף לקטגוריה"}
           </button>
         )}
 
-        <select
-          value={product.categoryId ?? ""}
+        <fieldset
           disabled={isSaving}
-          onChange={(e) => onAssign(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-2 py-2 text-xs"
+          className="space-y-1 rounded-lg border border-gray-200 p-2"
         >
-          <option value="">החזר למוצרים חדשים</option>
+          <legend className="px-1 text-xs font-semibold text-gray-700">
+            קטגוריות המוצר
+          </legend>
           {categories.map((category) => (
-            <option key={category.id} value={category.id}>
+            <label
+              key={category.id}
+              className="flex cursor-pointer items-center gap-2 text-xs text-gray-700"
+            >
+              <input
+                type="checkbox"
+                checked={liveCategoryIds.includes(category.id)}
+                onChange={(event) => {
+                  const nextCategoryIds = event.target.checked
+                    ? [...new Set([...liveCategoryIds, category.id])]
+                    : liveCategoryIds.filter((id) => id !== category.id);
+                  onCategoriesChange(nextCategoryIds);
+                }}
+                className="size-4 accent-emerald-600"
+              />
               {category.name}
-            </option>
+            </label>
           ))}
-        </select>
+        </fieldset>
+
+        {!product.isStaging && (
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() => onCategoriesChange([])}
+            className="w-full rounded-xl border border-amber-300 py-2 text-xs font-medium text-amber-800 disabled:opacity-60"
+          >
+            החזר למוצרים חדשים
+          </button>
+        )}
       </div>
     </article>
   );

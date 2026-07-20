@@ -13,7 +13,7 @@ export async function GET() {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, sort_order, is_staging")
+    .select("id, name, sort_order, is_staging, is_hidden_from_customers")
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -41,8 +41,12 @@ export async function POST(request: Request) {
 
   const { data, error } = await supabase
     .from("categories")
-    .insert({ name: name.trim(), sort_order: (count ?? 0) + 1 })
-    .select()
+    .insert({
+      name: name.trim(),
+      sort_order: (count ?? 0) + 1,
+      is_hidden_from_customers: false,
+    })
+    .select("id, name, sort_order, is_staging, is_hidden_from_customers")
     .single();
 
   if (error) {
@@ -100,7 +104,7 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json();
-  const { id, name, move } = body;
+  const { id, name, move, is_hidden_from_customers } = body;
 
   if (!id) {
     return NextResponse.json({ error: "חסר מזהה" }, { status: 400 });
@@ -121,6 +125,13 @@ export async function PATCH(request: Request) {
   if (existingCategory?.is_staging && name !== undefined) {
     return NextResponse.json(
       { error: "לא ניתן לשנות את שם קטגוריית מוצרים חדשים" },
+      { status: 400 },
+    );
+  }
+
+  if (existingCategory?.is_staging && is_hidden_from_customers !== undefined) {
+    return NextResponse.json(
+      { error: "לא ניתן לשנות נראות של קטגוריית מוצרים חדשים" },
       { status: 400 },
     );
   }
@@ -162,6 +173,22 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: true });
   }
 
+  if (typeof is_hidden_from_customers === "boolean") {
+    const { data, error } = await supabase
+      .from("categories")
+      .update({ is_hidden_from_customers })
+      .eq("id", id)
+      .select("id, name, sort_order, is_staging, is_hidden_from_customers")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    revalidateTag(CATALOG_CACHE_TAG, "max");
+    return NextResponse.json({ category: data });
+  }
+
   if (!name?.trim()) {
     return NextResponse.json({ error: "חסר שם" }, { status: 400 });
   }
@@ -170,7 +197,7 @@ export async function PATCH(request: Request) {
     .from("categories")
     .update({ name: name.trim() })
     .eq("id", id)
-    .select()
+    .select("id, name, sort_order, is_staging, is_hidden_from_customers")
     .single();
 
   if (error) {

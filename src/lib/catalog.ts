@@ -20,7 +20,7 @@ export async function getCategories(options?: {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, sort_order, is_staging")
+    .select("id, name, sort_order, is_staging, is_hidden_from_customers")
     .order("sort_order", { ascending: true });
 
   if (error) throw new Error(error.message);
@@ -29,7 +29,9 @@ export async function getCategories(options?: {
   if (options?.includeStaging) {
     return categories;
   }
-  return categories.filter((c) => !c.is_staging);
+  return categories.filter(
+    (c) => !c.is_staging && !c.is_hidden_from_customers,
+  );
 }
 
 export async function getOverridesMap(): Promise<Map<number, ProductOverride>> {
@@ -108,7 +110,7 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
 
 export const getCachedCatalogProducts = unstable_cache(
   async () => getCatalogProducts(),
-  ["catalog-products-v4"],
+  ["catalog-products-v5"],
   { revalidate: 300, tags: [CATALOG_CACHE_TAG] },
 );
 

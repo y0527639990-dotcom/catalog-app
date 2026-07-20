@@ -23,6 +23,7 @@ export interface Category {
   name: string;
   sort_order: number;
   is_staging?: boolean;
+  is_hidden_from_customers?: boolean;
 }
 
 export interface CatalogProduct {

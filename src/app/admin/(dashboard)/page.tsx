@@ -9,6 +9,7 @@ interface Category {
   name: string;
   sort_order: number;
   is_staging?: boolean;
+  is_hidden_from_customers?: boolean;
 }
 
 interface AdminProduct {
@@ -199,6 +200,45 @@ export default function AdminCatalogPage() {
 
     await loadCategories();
     setMessage("סדר הקטגוריות עודכן");
+  }
+
+  async function toggleCategoryHidden(
+    id: string,
+    isHiddenFromCustomers: boolean,
+  ) {
+    setError("");
+    const response = await fetch("/api/admin/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        is_hidden_from_customers: isHiddenFromCustomers,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || "שגיאה בעדכון נראות");
+      return;
+    }
+
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              is_hidden_from_customers: Boolean(
+                data.category?.is_hidden_from_customers,
+              ),
+            }
+          : c,
+      ),
+    );
+    setMessage(
+      isHiddenFromCustomers
+        ? `הקטגוריה "${data.category?.name ?? ""}" מוסתרת מלקוחות`
+        : `הקטגוריה "${data.category?.name ?? ""}" גלויה ללקוחות`,
+    );
   }
 
   async function saveCategories(itemId: number, categoryIds: string[]) {
@@ -467,7 +507,8 @@ export default function AdminCatalogPage() {
         {categories.length > 0 && (
           <div className="mt-4 space-y-2">
             <p className="text-sm text-gray-600">
-              סדר הקטגוריות (כפי שיופיע ללקוח) — השתמש בחיצים:
+              סדר הקטגוריות (כפי שיופיע ללקוח) — השתמש בחיצים. סמן
+              &quot;הסתר מלקוחות&quot; כדי להסתיר קטגוריה מהקטלוג.
             </p>
             {categories.map((category, index) => (
               <CategoryChip
@@ -479,6 +520,7 @@ export default function AdminCatalogPage() {
                 onDelete={deleteCategory}
                 onMoveUp={() => moveCategory(category.id, "up")}
                 onMoveDown={() => moveCategory(category.id, "down")}
+                onToggleHidden={toggleCategoryHidden}
               />
             ))}
           </div>
@@ -635,6 +677,7 @@ function CategoryChip({
   onDelete,
   onMoveUp,
   onMoveDown,
+  onToggleHidden,
 }: {
   category: Category;
   isFirst: boolean;
@@ -643,9 +686,11 @@ function CategoryChip({
   onDelete: (id: string, name: string) => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  onToggleHidden: (id: string, isHiddenFromCustomers: boolean) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.name);
+  const isHidden = Boolean(category.is_hidden_from_customers);
 
   useEffect(() => {
     setName(category.name);
@@ -687,7 +732,13 @@ function CategoryChip({
   }
 
   return (
-    <span className="flex w-full items-center justify-between gap-2 rounded-xl bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+    <span
+      className={`flex w-full flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-2 text-sm ${
+        isHidden
+          ? "bg-gray-100 text-gray-600"
+          : "bg-emerald-50 text-emerald-800"
+      }`}
+    >
       <span className="font-medium">
         {category.name}
         {category.is_staging && (
@@ -695,44 +746,60 @@ function CategoryChip({
             מנהלים בלבד
           </span>
         )}
+        {!category.is_staging && isHidden && (
+          <span className="mr-2 rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-700">
+            מוסתרת מלקוחות
+          </span>
+        )}
       </span>
-      <span className="flex items-center gap-2">
+      <span className="flex flex-wrap items-center gap-2">
         {!category.is_staging && (
           <>
-        <button
-          type="button"
-          disabled={isFirst}
-          onClick={onMoveUp}
-          className="rounded border border-emerald-200 px-2 py-1 disabled:opacity-30"
-          aria-label="הזז למעלה"
-        >
-          ↑
-        </button>
-        <button
-          type="button"
-          disabled={isLast}
-          onClick={onMoveDown}
-          className="rounded border border-emerald-200 px-2 py-1 disabled:opacity-30"
-          aria-label="הזז למטה"
-        >
-          ↓
-        </button>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="text-emerald-700 underline"
-          aria-label={`ערוך ${category.name}`}
-        >
-          ערוך
-        </button>
-        <button
-          type="button"
-          onClick={() => onDelete(category.id, category.name)}
-          className="text-red-600"
-          aria-label={`מחק ${category.name}`}
-        >
-          ×
-        </button>
+            <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-700">
+              <input
+                type="checkbox"
+                checked={isHidden}
+                onChange={(event) =>
+                  onToggleHidden(category.id, event.target.checked)
+                }
+                className="size-4 accent-emerald-600"
+              />
+              הסתר מלקוחות
+            </label>
+            <button
+              type="button"
+              disabled={isFirst}
+              onClick={onMoveUp}
+              className="rounded border border-emerald-200 px-2 py-1 disabled:opacity-30"
+              aria-label="הזז למעלה"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              disabled={isLast}
+              onClick={onMoveDown}
+              className="rounded border border-emerald-200 px-2 py-1 disabled:opacity-30"
+              aria-label="הזז למטה"
+            >
+              ↓
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="text-emerald-700 underline"
+              aria-label={`ערוך ${category.name}`}
+            >
+              ערוך
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(category.id, category.name)}
+              className="text-red-600"
+              aria-label={`מחק ${category.name}`}
+            >
+              ×
+            </button>
           </>
         )}
       </span>

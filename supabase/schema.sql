@@ -21,6 +21,7 @@ create table if not exists categories (
   name text not null,
   sort_order int not null default 0,
   is_staging boolean not null default false,
+  is_hidden_from_customers boolean not null default false,
   created_at timestamptz not null default now()
 );
 

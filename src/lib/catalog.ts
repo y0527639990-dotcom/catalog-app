@@ -108,6 +108,61 @@ export async function getCatalogProducts(): Promise<CatalogProduct[]> {
   return products;
 }
 
+/** Export for super-admin PDF: one category, including customer-hidden categories. */
+export async function getCategoryCatalogForExport(categoryId: string): Promise<{
+  category: Category;
+  products: CatalogProduct[];
+} | null> {
+  const [items, allCategories, overrides, mappings] = await Promise.all([
+    fetchRivhitItems(),
+    getCategories({ includeStaging: true }),
+    getOverridesMap(),
+    fetchAllRows<{ rivhit_item_id: number; category_id: string; sort_order: number }>(
+      createAdminClient(),
+      "product_mappings",
+      "rivhit_item_id, category_id, sort_order",
+    ),
+  ]);
+
+  const category = allCategories.find((c) => c.id === categoryId);
+  if (!category || category.is_staging) {
+    return null;
+  }
+
+  const itemIdsInCategory = new Set(
+    mappings
+      .filter((mapping) => mapping.category_id === categoryId)
+      .map((mapping) => mapping.rivhit_item_id),
+  );
+
+  const products: CatalogProduct[] = [];
+
+  for (const item of items) {
+    if (!itemIdsInCategory.has(item.item_id)) continue;
+
+    const override = overrides.get(item.item_id);
+    if (override?.is_hidden) continue;
+
+    const sku = getSku(item);
+    if (!sku) continue;
+
+    products.push({
+      itemId: item.item_id,
+      sku,
+      name: override?.custom_name || item.item_name,
+      price: override?.custom_price ?? item.sale_nis,
+      image: resolveProductImage(item.picture_link, override),
+      categoryId: category.id,
+      categoryName: category.name,
+      categorySortOrder: category.sort_order,
+    });
+  }
+
+  products.sort((a, b) => compareSku(a.sku, b.sku));
+
+  return { category, products };
+}
+
 export const getCachedCatalogProducts = unstable_cache(
   async () => getCatalogProducts(),
   ["catalog-products-v5"],

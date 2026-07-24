@@ -50,6 +50,7 @@ export default function AdminCatalogPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const initialStagingFilter = useRef(false);
 
   async function loadCategories() {
@@ -59,6 +60,13 @@ export default function AdminCatalogPage() {
       setCategories(data.categories ?? []);
     }
   }
+
+  useEffect(() => {
+    fetch("/api/auth/admin/me")
+      .then((r) => r.json())
+      .then((d) => setIsSuperAdmin(d.isSuperAdmin === true))
+      .catch(() => {});
+  }, []);
 
   async function loadProducts(refresh = false) {
     setLoading(true);
@@ -509,6 +517,9 @@ export default function AdminCatalogPage() {
             <p className="text-sm text-gray-600">
               סדר הקטגוריות (כפי שיופיע ללקוח) — השתמש בחיצים. סמן
               &quot;הסתר מלקוחות&quot; כדי להסתיר קטגוריה מהקטלוג.
+              {isSuperAdmin
+                ? " מנהל ראשי יכול להוריד קטלוג PDF לכל קטגוריה."
+                : ""}
             </p>
             {categories.map((category, index) => (
               <CategoryChip
@@ -516,6 +527,7 @@ export default function AdminCatalogPage() {
                 category={category}
                 isFirst={index === 0}
                 isLast={index === categories.length - 1}
+                isSuperAdmin={isSuperAdmin}
                 onRename={renameCategory}
                 onDelete={deleteCategory}
                 onMoveUp={() => moveCategory(category.id, "up")}
@@ -673,6 +685,7 @@ function CategoryChip({
   category,
   isFirst,
   isLast,
+  isSuperAdmin,
   onRename,
   onDelete,
   onMoveUp,
@@ -682,6 +695,7 @@ function CategoryChip({
   category: Category;
   isFirst: boolean;
   isLast: boolean;
+  isSuperAdmin: boolean;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string, name: string) => void;
   onMoveUp: () => void;
@@ -755,6 +769,16 @@ function CategoryChip({
       <span className="flex flex-wrap items-center gap-2">
         {!category.is_staging && (
           <>
+            {isSuperAdmin && (
+              <a
+                href={`/admin/category-pdf/${category.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-lg bg-emerald-700 px-2.5 py-1 text-xs font-semibold text-white hover:bg-emerald-800"
+              >
+                הורד PDF
+              </a>
+            )}
             <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-gray-700">
               <input
                 type="checkbox"
